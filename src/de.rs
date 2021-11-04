@@ -117,12 +117,76 @@ impl <'de> Visitor<'de> for TlvStringVisitor {
     type Value = String;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a string prifixed by a 16 bit length")
+        formatter.write_str("a string prifixed by a length")
     }
 
     fn visit_borrowed_str<E>(self, value: &'de str)
     -> core::result::Result<Self::Value, E> {
         Ok(value.to_string())
+    }
+}
+
+pub struct TlvVecVisitor<'de, T: serde::Deserialize<'de>> {
+    phantom: PhantomData::<T>,
+    of_the_opera: PhantomData::<&'de()>
+}
+
+impl<'de, T: serde::Deserialize<'de>> TlvVecVisitor<'de, T> {
+    pub fn new() -> Self {
+        TlvVecVisitor{
+            phantom: PhantomData::<T>{},
+            of_the_opera: PhantomData::<&'de()>{},
+        }
+    }
+}
+
+impl <'de, T: serde::Deserialize<'de>> Visitor<'de> for TlvVecVisitor<'de, T> {
+    type Value = Vec<T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("an array prifixed by a length")
+    }
+
+    fn visit_seq<A>(self, mut seq: A)
+    -> core::result::Result<Self::Value, A::Error> 
+    where
+        A: SeqAccess<'de>
+    {
+        let mut value = Vec::new();
+        loop {
+            match seq.next_element()? {
+                Some(x) => value.push(x),
+                None => break,
+            }
+        }
+        Ok(value)
+    }
+}
+
+struct PackedArray<'a, 'de: 'a, Endian: NumDe> {
+    de: &'a mut Deserializer<'de, Endian>,
+    count: usize,
+}
+
+impl<'de, 'a, Endian: NumDe> PackedArray<'a, 'de, Endian> {
+    fn new(de: &'a mut Deserializer<'de, Endian>, count: usize) -> Self {
+        PackedArray{ de, count }
+    }
+}
+
+impl<'de, 'a, Endian: NumDe>
+SeqAccess<'de> for PackedArray<'a, 'de, Endian> {
+    type Error = Error;
+
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        self.count -= 1;
+        if self.count == 0 {
+            return Ok(None)
+        }
+        seed.deserialize(&mut *self.de).map(Some)
     }
 }
 
@@ -346,8 +410,14 @@ de::Deserializer<'de> for &'a mut Deserializer<'de, Endian> {
                 let s = self.read_tlv_string::<u64>()?;
                 visitor.visit_borrowed_str(s)
             }
-            _ => {
-                unimplemented!()
+            "vec32" => {
+                let n = std::mem::size_of::<u32>();
+                let len = u32::read_size::<Endian>(&self.input[..n])?;
+                self.input = &self.input[n..];
+                visitor.visit_seq(PackedArray::new(self, len+1 as usize))
+            }
+            s => {
+                unimplemented!("{}", s)
             }
         }
     }
@@ -459,7 +529,7 @@ fn test_struct_lv() {
 }
 
 #[test]
-fn test_struct_lv8() {
+fn test_struct_str_lv8() {
 
     #[derive(Deserialize, PartialEq, Debug)]
     struct Version {
@@ -467,7 +537,7 @@ fn test_struct_lv8() {
         typ: u8,
         tag: u16,
         msize: u32,
-        #[serde(with = "crate::lv8")]
+        #[serde(with = "crate::str_lv8")]
         version: String,
     }
 
@@ -493,7 +563,7 @@ fn test_struct_lv8() {
 }
 
 #[test]
-fn test_struct_lv16() {
+fn test_struct_str_lv16() {
 
     #[derive(Deserialize, PartialEq, Debug)]
     struct Version {
@@ -501,7 +571,7 @@ fn test_struct_lv16() {
         typ: u8,
         tag: u16,
         msize: u32,
-        #[serde(with = "crate::lv16")]
+        #[serde(with = "crate::str_lv16")]
         version: String,
     }
 
@@ -527,7 +597,7 @@ fn test_struct_lv16() {
 }
 
 #[test]
-fn test_struct_lv32() {
+fn test_struct_str_lv32() {
 
     #[derive(Deserialize, PartialEq, Debug)]
     struct Version {
@@ -535,7 +605,7 @@ fn test_struct_lv32() {
         typ: u8,
         tag: u16,
         msize: u32,
-        #[serde(with = "crate::lv32")]
+        #[serde(with = "crate::str_lv32")]
         version: String,
     }
 
@@ -561,7 +631,7 @@ fn test_struct_lv32() {
 }
 
 #[test]
-fn test_struct_lv64() {
+fn test_struct_str_lv64() {
 
     #[derive(Deserialize, PartialEq, Debug)]
     struct Version {
@@ -569,7 +639,7 @@ fn test_struct_lv64() {
         typ: u8,
         tag: u16,
         msize: u32,
-        #[serde(with = "crate::lv64")]
+        #[serde(with = "crate::str_lv64")]
         version: String,
     }
 
@@ -603,7 +673,7 @@ fn test_nested() {
         typ: u8,
         tag: u16,
         msize: u32,
-        #[serde(with = "crate::lv64")]
+        #[serde(with = "crate::str_lv64")]
         version: String,
         info: Info,
     }
@@ -638,6 +708,59 @@ fn test_nested() {
             version: 12345,
             path: 678910,
         }
+    };
+
+    assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());
+
+}
+
+#[test]
+fn test_struct_vec_lv32() {
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv32")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    let b = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        2, 0, 0, 0, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+    let expected = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
     };
 
     assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());

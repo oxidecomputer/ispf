@@ -7,7 +7,7 @@ struct Version {
     typ: u8,
     tag: u16,
     msize: u32,
-    #[serde(with = "ipf::lv64")]
+    #[serde(with = "ipf::str_lv64")]
     version: String,
 }
 

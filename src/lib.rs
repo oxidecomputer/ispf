@@ -8,7 +8,7 @@ pub use ser::{to_bytes, to_bytes_le, Serializer};
 
 pub struct LittleEndian { }
 
-pub mod lv8 {
+pub mod str_lv8 {
     use serde::ser::SerializeTuple;
 
     pub fn serialize<S>(v: &str, s: S) -> Result<S::Ok, S::Error>
@@ -29,7 +29,7 @@ pub mod lv8 {
     }
 }
 
-pub mod lv16 {
+pub mod str_lv16 {
     use serde::ser::SerializeTuple;
 
     pub fn serialize<S>(v: &str, s: S) -> Result<S::Ok, S::Error>
@@ -51,7 +51,7 @@ pub mod lv16 {
 
 }
 
-pub mod lv32 {
+pub mod str_lv32 {
     use serde::ser::SerializeTuple;
 
     pub fn serialize<S>(v: &str, s: S) -> Result<S::Ok, S::Error>
@@ -72,7 +72,8 @@ pub mod lv32 {
     }
 }
 
-pub mod lv64 {
+
+pub mod str_lv64 {
     use serde::ser::SerializeTuple;
 
     pub fn serialize<S>(v: &str, s: S) -> Result<S::Ok, S::Error>
@@ -90,5 +91,32 @@ pub mod lv64 {
         D: serde::Deserializer<'de>
     {
         d.deserialize_tuple_struct("string64", 2, crate::de::TlvStringVisitor)
+    }
+}
+
+pub mod vec_lv32 {
+    use serde::ser::SerializeTuple;
+
+    pub fn serialize<S,T>(v: &Vec<T>, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+        T: serde::Serialize,
+    {
+        let mut t = s.serialize_tuple(std::mem::size_of::<u32>()+v.len())?;
+        t.serialize_element(&(v.len() as u32))?;
+        t.serialize_element(&v)?;
+        t.end()
+    }
+
+    pub fn deserialize<'de, D, T>(d: D) -> Result<Vec<T>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        T: serde::Deserialize<'de>,
+    {
+        d.deserialize_tuple_struct(
+            "vec32",
+            2,
+            crate::de::TlvVecVisitor::new(),
+        )
     }
 }

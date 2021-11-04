@@ -110,7 +110,6 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
 
     fn serialize_bytes(self, _v: &[u8]) -> Result<Self::Ok> {
         Ok(())
-        //unimplemented!()
     }
 
     fn serialize_none(self) -> Result<Self::Ok> {
@@ -178,7 +177,6 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         _len: Option<usize>
     ) -> Result<Self::SerializeSeq> {
         Ok(self)
-        //unimplemented!()
     }
 
     fn serialize_tuple(
@@ -404,7 +402,7 @@ fn test_struct_lv() {
 }
 
 #[test]
-fn test_struct_lv8() {
+fn test_struct_str_lv8() {
 
     #[derive(Serialize)]
     struct Version {
@@ -412,7 +410,7 @@ fn test_struct_lv8() {
         typ: u8,
         tag: u16,
         msize: u32,
-        #[serde(serialize_with = "crate::lv8::serialize")]
+        #[serde(serialize_with = "crate::str_lv8::serialize")]
         version: String,
     }
 
@@ -438,7 +436,7 @@ fn test_struct_lv8() {
 }
 
 #[test]
-fn test_struct_lv16() {
+fn test_struct_str_lv16() {
 
     #[derive(Serialize)]
     struct Version {
@@ -446,7 +444,7 @@ fn test_struct_lv16() {
         typ: u8,
         tag: u16,
         msize: u32,
-        #[serde(with = "crate::lv16")]
+        #[serde(with = "crate::str_lv16")]
         version: String,
     }
 
@@ -472,7 +470,7 @@ fn test_struct_lv16() {
 }
 
 #[test]
-fn test_struct_lv32() {
+fn test_struct_str_lv32() {
 
     #[derive(Serialize)]
     struct Version {
@@ -480,7 +478,7 @@ fn test_struct_lv32() {
         typ: u8,
         tag: u16,
         msize: u32,
-        #[serde(serialize_with = "crate::lv32::serialize")]
+        #[serde(serialize_with = "crate::str_lv32::serialize")]
         version: String,
     }
 
@@ -506,7 +504,7 @@ fn test_struct_lv32() {
 }
 
 #[test]
-fn test_struct_lv64() {
+fn test_struct_str_lv64() {
 
     #[derive(Serialize)]
     struct Version {
@@ -514,7 +512,7 @@ fn test_struct_lv64() {
         typ: u8,
         tag: u16,
         msize: u32,
-        #[serde(serialize_with = "crate::lv64::serialize")]
+        #[serde(serialize_with = "crate::str_lv64::serialize")]
         version: String,
     }
 
@@ -548,7 +546,7 @@ fn test_nested_struct() {
         typ: u8,
         tag: u16,
         msize: u32,
-        #[serde(serialize_with = "crate::lv64::serialize")]
+        #[serde(serialize_with = "crate::str_lv64::serialize")]
         version: String,
         info: Info,
     }
@@ -586,5 +584,59 @@ fn test_nested_struct() {
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
+
+}
+
+#[test]
+fn test_struct_vec_lv32() {
+
+    #[derive(Debug, Serialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv32")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Serialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    let r = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    let expected = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        2, 0, 0, 0, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+
+    assert_eq!(to_bytes_le(&r).unwrap(), expected);
 
 }
