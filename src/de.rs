@@ -393,6 +393,8 @@ de::Deserializer<'de> for &'a mut Deserializer<'de, Endian> {
     where
         V: Visitor<'de>,
     {
+        use std::mem::size_of;
+
         match name {
             "string8" => {
                 let s = self.read_tlv_string::<u8>()?;
@@ -411,25 +413,25 @@ de::Deserializer<'de> for &'a mut Deserializer<'de, Endian> {
                 visitor.visit_borrowed_str(s)
             }
             "vec8" => {
-                let n = std::mem::size_of::<u8>();
+                let n = size_of::<u8>();
                 let len = u8::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArray::new(self, len+1 as usize))
             }
             "vec16" => {
-                let n = std::mem::size_of::<u16>();
+                let n = size_of::<u16>();
                 let len = u16::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArray::new(self, len+1 as usize))
             }
             "vec32" => {
-                let n = std::mem::size_of::<u32>();
+                let n = size_of::<u32>();
                 let len = u32::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArray::new(self, len+1 as usize))
             }
             "vec64" => {
-                let n = std::mem::size_of::<u64>();
+                let n = size_of::<u64>();
                 let len = u64::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArray::new(self, len+1 as usize))
