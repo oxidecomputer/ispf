@@ -461,7 +461,9 @@ de::Deserializer<'de> for &'a mut Deserializer<'de, Endian> {
         self.deserialize_seq(visitor)
     }
 
-    //TODO
+    //TODO: however, enums actually work fine if the derive macro from
+    //serde_repr is used, which crates the exact desired behavior, so perhaps
+    //not a TODO
     fn deserialize_enum<V>(
         self,
         _name: &'static str,
