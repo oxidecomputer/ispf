@@ -201,3 +201,131 @@ pub mod vec_lv64 {
         )
     }
 }
+
+pub trait WireSize {
+    fn wire_size(&self) -> usize;
+}
+
+pub mod vec_lv8b {
+    use serde::ser::SerializeTuple;
+
+    pub fn serialize<S,T>(v: &Vec<T>, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+        T: serde::Serialize + crate::WireSize,
+    {
+        let mut sz = 0usize;
+        for e in v {
+            sz += e.wire_size();
+        }
+        let mut t = s.serialize_tuple(std::mem::size_of::<u8>()+v.len())?;
+        t.serialize_element(&(sz as u8))?;
+        t.serialize_element(&v)?;
+        t.end()
+    }
+
+    pub fn deserialize<'de, D, T>(d: D) -> Result<Vec<T>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        T: serde::Deserialize<'de>,
+    {
+        d.deserialize_tuple_struct(
+            "vec8b",
+            2,
+            crate::de::TlvVecVisitor::new(),
+        )
+    }
+}
+
+pub mod vec_lv16b {
+    use serde::ser::SerializeTuple;
+
+    pub fn serialize<S,T>(v: &Vec<T>, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+        T: serde::Serialize + crate::WireSize,
+    {
+        let mut sz = 0usize;
+        for e in v {
+            sz += e.wire_size();
+        }
+        let mut t = s.serialize_tuple(std::mem::size_of::<u16>()+v.len())?;
+        t.serialize_element(&(sz as u16))?;
+        t.serialize_element(&v)?;
+        t.end()
+    }
+
+    pub fn deserialize<'de, D, T>(d: D) -> Result<Vec<T>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        T: serde::Deserialize<'de>,
+    {
+        d.deserialize_tuple_struct(
+            "vec16b",
+            2,
+            crate::de::TlvVecVisitor::new(),
+        )
+    }
+}
+
+pub mod vec_lv32b {
+    use serde::ser::SerializeTuple;
+
+    pub fn serialize<S,T>(v: &Vec<T>, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+        T: serde::Serialize + crate::WireSize,
+    {
+        let mut sz = 0usize;
+        for e in v {
+            sz += e.wire_size();
+        }
+        let mut t = s.serialize_tuple(std::mem::size_of::<u32>()+v.len())?;
+        t.serialize_element(&(sz as u32))?;
+        t.serialize_element(&v)?;
+        t.end()
+    }
+
+    pub fn deserialize<'de, D, T>(d: D) -> Result<Vec<T>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        T: serde::Deserialize<'de>,
+    {
+        d.deserialize_tuple_struct(
+            "vec32b",
+            2,
+            crate::de::TlvVecVisitor::new(),
+        )
+    }
+}
+
+pub mod vec_lv64b {
+    use serde::ser::SerializeTuple;
+
+    pub fn serialize<S,T>(v: &Vec<T>, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+        T: serde::Serialize + crate::WireSize,
+    {
+        let mut sz = 0usize;
+        for e in v {
+            sz += e.wire_size();
+        }
+        let mut t = s.serialize_tuple(std::mem::size_of::<u64>()+v.len())?;
+        t.serialize_element(&(sz as u64))?;
+        t.serialize_element(&v)?;
+        t.end()
+    }
+
+    pub fn deserialize<'de, D, T>(d: D) -> Result<Vec<T>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        T: serde::Deserialize<'de>,
+    {
+        d.deserialize_tuple_struct(
+            "vec64b",
+            2,
+            crate::de::TlvVecVisitor::new(),
+        )
+    }
+}

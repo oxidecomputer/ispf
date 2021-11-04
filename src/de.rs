@@ -190,6 +190,37 @@ SeqAccess<'de> for PackedArray<'a, 'de, Endian> {
     }
 }
 
+struct PackedArrayByteSized<'a, 'de: 'a, Endian: NumDe> {
+    de: &'a mut Deserializer<'de, Endian>,
+    bytes: usize,
+}
+
+impl<'de, 'a, Endian: NumDe> PackedArrayByteSized<'a, 'de, Endian> {
+    fn new(de: &'a mut Deserializer<'de, Endian>, bytes: usize) -> Self {
+        PackedArrayByteSized{ de, bytes }
+    }
+}
+
+impl<'de, 'a, Endian: NumDe>
+SeqAccess<'de> for PackedArrayByteSized<'a, 'de, Endian> {
+    type Error = Error;
+
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        println!("{} BYTES LEFT", self.bytes);
+        if self.bytes == 0 {
+            return Ok(None)
+        }
+        let before = self.de.input.len();
+        let res = seed.deserialize(&mut *self.de).map(Some);
+        let after = self.de.input.len();
+        self.bytes -= before - after;
+        res
+    }
+}
+
 impl<'de, 'a, Endian: NumDe>
 de::Deserializer<'de> for &'a mut Deserializer<'de, Endian> {
     type Error = Error;
@@ -435,6 +466,34 @@ de::Deserializer<'de> for &'a mut Deserializer<'de, Endian> {
                 let len = u64::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArray::new(self, len+1 as usize))
+            }
+            "vec8b" => {
+                let n = size_of::<u8>();
+                let len = u8::read_size::<Endian>(&self.input[..n])?;
+                self.input = &self.input[n..];
+                visitor.visit_seq(
+                    PackedArrayByteSized::new(self, len as usize))
+            }
+            "vec16b" => {
+                let n = size_of::<u16>();
+                let len = u16::read_size::<Endian>(&self.input[..n])?;
+                self.input = &self.input[n..];
+                visitor.visit_seq(
+                    PackedArrayByteSized::new(self, len as usize))
+            }
+            "vec32b" => {
+                let n = size_of::<u32>();
+                let len = u32::read_size::<Endian>(&self.input[..n])?;
+                self.input = &self.input[n..];
+                visitor.visit_seq(
+                    PackedArrayByteSized::new(self, len as usize))
+            }
+            "vec64b" => {
+                let n = size_of::<u64>();
+                let len = u64::read_size::<Endian>(&self.input[..n])?;
+                self.input = &self.input[n..];
+                visitor.visit_seq(
+                    PackedArrayByteSized::new(self, len as usize))
             }
             s => {
                 unimplemented!("{}", s)
@@ -920,6 +979,218 @@ fn test_struct_vec_lv64() {
         9,
         15, 0,
         2, 0, 0, 0, 0, 0, 0, 0, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+    let expected = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());
+
+}
+
+#[test]
+fn test_struct_vec_lv8b() {
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv8b")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    let b = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        37, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+    let expected = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());
+
+}
+
+#[test]
+fn test_struct_vec_lv16b() {
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv16b")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    let b = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        37, 0, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+    let expected = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());
+
+}
+
+#[test]
+fn test_struct_vec_lv32b() {
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv32b")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    let b = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        37, 0, 0, 0, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+    let expected = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());
+
+}
+
+#[test]
+fn test_struct_vec_lv64b() {
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv64b")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    let b = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        37, 0, 0, 0, 0, 0, 0, 0, // len
         
         // .1
         37, 0, 0, 0, 0, 0, 0, 0,                              // offset

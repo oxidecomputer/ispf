@@ -802,3 +802,263 @@ fn test_struct_vec_lv64() {
     assert_eq!(to_bytes_le(&r).unwrap(), expected);
 
 }
+
+#[test]
+fn test_struct_vec_lv8b() {
+
+    #[derive(Debug, Serialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv8b")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Serialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    impl crate::WireSize for Dirent {
+        fn wire_size(&self) -> usize {
+            use std::mem::size_of;
+            size_of::<u64>()        // offset
+                + size_of::<u8>()   // typ
+                + size_of::<u16>()  // name.len TODO: awkward, user specifying
+                                    //                serde inserted value
+                + self.name.len()   // name
+        }
+    }
+
+    let r = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    let expected = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        37, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+
+    assert_eq!(to_bytes_le(&r).unwrap(), expected);
+
+}
+
+#[test]
+fn test_struct_vec_lv16b() {
+
+    #[derive(Debug, Serialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv16b")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Serialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    impl crate::WireSize for Dirent {
+        fn wire_size(&self) -> usize {
+            use std::mem::size_of;
+            size_of::<u64>()        // offset
+                + size_of::<u8>()   // typ
+                + size_of::<u16>()  // name.len TODO: awkward, user specifying
+                                    //                serde inserted value
+                + self.name.len()   // name
+        }
+    }
+
+    let r = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    let expected = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        37, 0, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+
+    assert_eq!(to_bytes_le(&r).unwrap(), expected);
+
+}
+
+#[test]
+fn test_struct_vec_lv32b() {
+
+    #[derive(Debug, Serialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv32b")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Serialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    impl crate::WireSize for Dirent {
+        fn wire_size(&self) -> usize {
+            use std::mem::size_of;
+            size_of::<u64>()        // offset
+                + size_of::<u8>()   // typ
+                + size_of::<u16>()  // name.len TODO: awkward, user specifying
+                                    //                serde inserted value
+                + self.name.len()   // name
+        }
+    }
+
+    let r = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    let expected = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        37, 0, 0, 0, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+
+    assert_eq!(to_bytes_le(&r).unwrap(), expected);
+
+}
+
+#[test]
+fn test_struct_vec_lv64b() {
+
+    #[derive(Debug, Serialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv64b")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Serialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    impl crate::WireSize for Dirent {
+        fn wire_size(&self) -> usize {
+            use std::mem::size_of;
+            size_of::<u64>()        // offset
+                + size_of::<u8>()   // typ
+                + size_of::<u16>()  // name.len TODO: awkward, user specifying
+                                    //                serde inserted value
+                + self.name.len()   // name
+        }
+    }
+
+    let r = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    let expected = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        37, 0, 0, 0, 0, 0, 0, 0, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+
+    assert_eq!(to_bytes_le(&r).unwrap(), expected);
+
+}
