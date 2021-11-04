@@ -107,7 +107,7 @@ where
     if deserializer.input.is_empty() {
         Ok(t)
     } else {
-        println!("TRAILING: {}", deserializer.input.len());
+        //println!("TRAILING: {}", deserializer.input.len());
         Err(Error::TrailingBytes)
     }
 }
@@ -209,7 +209,6 @@ SeqAccess<'de> for PackedArrayByteSized<'a, 'de, Endian> {
     where
         T: DeserializeSeed<'de>,
     {
-        println!("{} BYTES LEFT", self.bytes);
         if self.bytes == 0 {
             return Ok(None)
         }
