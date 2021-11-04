@@ -410,9 +410,27 @@ de::Deserializer<'de> for &'a mut Deserializer<'de, Endian> {
                 let s = self.read_tlv_string::<u64>()?;
                 visitor.visit_borrowed_str(s)
             }
+            "vec8" => {
+                let n = std::mem::size_of::<u8>();
+                let len = u8::read_size::<Endian>(&self.input[..n])?;
+                self.input = &self.input[n..];
+                visitor.visit_seq(PackedArray::new(self, len+1 as usize))
+            }
+            "vec16" => {
+                let n = std::mem::size_of::<u16>();
+                let len = u16::read_size::<Endian>(&self.input[..n])?;
+                self.input = &self.input[n..];
+                visitor.visit_seq(PackedArray::new(self, len+1 as usize))
+            }
             "vec32" => {
                 let n = std::mem::size_of::<u32>();
                 let len = u32::read_size::<Endian>(&self.input[..n])?;
+                self.input = &self.input[n..];
+                visitor.visit_seq(PackedArray::new(self, len+1 as usize))
+            }
+            "vec64" => {
+                let n = std::mem::size_of::<u64>();
+                let len = u64::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArray::new(self, len+1 as usize))
             }
@@ -715,6 +733,112 @@ fn test_nested() {
 }
 
 #[test]
+fn test_struct_vec_lv8() {
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv8")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    let b = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        2, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+    let expected = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());
+
+}
+
+#[test]
+fn test_struct_vec_lv16() {
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv16")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    let b = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        2, 0, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+    let expected = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());
+
+}
+
+#[test]
 fn test_struct_vec_lv32() {
 
     #[derive(Debug, Deserialize, PartialEq)]
@@ -739,6 +863,59 @@ fn test_struct_vec_lv32() {
         9,
         15, 0,
         2, 0, 0, 0, // len
+        
+        // .1
+        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
+        2,                                                    // typ
+        9, 0,                                                 // name.len
+        b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
+
+        // .2
+        73, 0, 0, 0, 0, 0, 0, 0,            // offset
+        9,                                  // typ
+        6, 0,                               // name.len
+        b'm', b'u', b'f', b'f', b'i', b'n', //name
+    ];
+
+    let expected = Rreaddir{
+        size: 47,
+        typ: 9,
+        tag: 15,
+        data: vec![
+            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
+            Dirent{offset: 73, typ: 9, name: "muffin".into()},
+        ]
+    };
+
+    assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());
+
+}
+
+#[test]
+fn test_struct_vec_lv64() {
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Rreaddir {
+        pub size: u32,
+        pub typ: u8,
+        pub tag: u16,
+        #[serde(with = "crate::vec_lv64")]
+        pub data: Vec<Dirent>,
+    }
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    pub struct Dirent {
+        pub offset: u64,
+        pub typ: u8,
+        #[serde(with = "crate::str_lv16")]
+        pub name: String,
+    }
+
+    let b = vec![
+        47, 0, 0, 0,
+        9,
+        15, 0,
+        2, 0, 0, 0, 0, 0, 0, 0, // len
         
         // .1
         37, 0, 0, 0, 0, 0, 0, 0,                              // offset
