@@ -1,3 +1,5 @@
+// Copyright 2021 Oxide Computer Company
+
 use ipf::{to_bytes_le, from_bytes_le};
 use serde::{Serialize, Deserialize};
 

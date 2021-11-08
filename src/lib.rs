@@ -1,3 +1,5 @@
+// Copyright 2021 Oxide Computer Company
+
 mod de;
 mod error;
 mod ser;

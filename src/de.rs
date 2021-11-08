@@ -1,3 +1,5 @@
+// Copyright 2021 Oxide Computer Company
+
 use std::marker::PhantomData;
 use std::convert::TryInto;
 use std::str::from_utf8;

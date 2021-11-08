@@ -1,3 +1,5 @@
+// Copyright 2021 Oxide Computer Company
+
 use serde::{ser, Serialize};
 use std::marker::PhantomData;
 
