@@ -109,7 +109,7 @@ where
     if deserializer.input.is_empty() {
         Ok(t)
     } else {
-        println!("warn: trailing bytes: {}", deserializer.input.len());
+        //println!("warn: trailing bytes: {}", deserializer.input.len());
         //Err(Error::TrailingBytes);
         Ok(t)
     }
