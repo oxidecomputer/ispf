@@ -1,6 +1,6 @@
 // Copyright 2021 Oxide Computer Company
 
-use ipf::{to_bytes_le, from_bytes_le};
+use ispf::{to_bytes_le, from_bytes_le};
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -9,11 +9,11 @@ struct Version {
     typ: u8,
     tag: u16,
     msize: u32,
-    #[serde(with = "ipf::str_lv64")]
+    #[serde(with = "ispf::str_lv64")]
     version: String,
 }
 
-fn main() -> Result<(), ipf::Error>{
+fn main() -> Result<(), ispf::Error>{
 
     let v = Version{
         size: 47,

@@ -1,4 +1,4 @@
-# Internet-Style Packet Format (IPF) for Serde
+# Internet-Style Packet Format (ISPF) for Serde
 
 This crate provides machinery for serializing and deserializing Internet-style
 packets with [Serde](https://serde.rs).
@@ -24,7 +24,7 @@ Consider the following Internet-style packet
 
 ```
 
-with Serde/IPF this can be represented as
+with Serde/ISPF this can be represented as
 
 ```rust
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -33,7 +33,7 @@ struct Version {
     typ: u8,
     tag: u16,
     msize: u32,
-    #[serde(with = "ipf::str_lv16")]
+    #[serde(with = "ispf::str_lv16")]
     version: String,
 }
 ```
@@ -62,9 +62,9 @@ println!("{:#?}", full_circle);
 assert_eq!(v, full_circle);
 ```
 
-So the basic thing that IPF does is create packed wire representations for RUst
+So the basic thing that ISPF does is create packed wire representations for Rust
 data types and provides a cofigurable means by which to represent types that are
-not statically sized, such as the `ipf::str_lv64` serializer annotation above.
+not statically sized, such as the `ispf::str_lv64` serializer annotation above.
 
 ## Available Formatters
 
