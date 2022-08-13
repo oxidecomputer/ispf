@@ -86,19 +86,23 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
     }
 
     fn serialize_u8(self, v: u8) -> Result<Self::Ok> {
-        Ok(self.output.push(v))
+        self.output.push(v);
+        Ok(())
     }
 
     fn serialize_u16(self, v: u16) -> Result<Self::Ok> {
-        Ok(self.output.extend_from_slice(&Endian::serialize_u16(v)))
+        self.output.extend_from_slice(&Endian::serialize_u16(v));
+        Ok(())
     }
 
     fn serialize_u32(self, v: u32) -> Result<Self::Ok> {
-        Ok(self.output.extend_from_slice(&Endian::serialize_u32(v)))
+        self.output.extend_from_slice(&Endian::serialize_u32(v));
+        Ok(())
     }
 
     fn serialize_u64(self, v: u64) -> Result<Self::Ok> {
-        Ok(self.output.extend_from_slice(&Endian::serialize_u64(v)))
+        self.output.extend_from_slice(&Endian::serialize_u64(v));
+        Ok(())
     }
 
     fn serialize_f32(self, _v: f32) -> Result<Self::Ok> {
@@ -206,7 +210,11 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         unimplemented!()
     }
 
-    fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
+    fn serialize_struct(
+        self,
+        _name: &'static str,
+        _len: usize,
+    ) -> Result<Self::SerializeStruct> {
         Ok(self)
     }
 
@@ -253,7 +261,9 @@ impl<'a, Endian: NumSer> ser::SerializeTuple for &'a mut Serializer<Endian> {
     }
 }
 
-impl<'a, Endian: NumSer> ser::SerializeTupleStruct for &'a mut Serializer<Endian> {
+impl<'a, Endian: NumSer> ser::SerializeTupleStruct
+    for &'a mut Serializer<Endian>
+{
     type Ok = ();
     type Error = Error;
 
@@ -269,7 +279,9 @@ impl<'a, Endian: NumSer> ser::SerializeTupleStruct for &'a mut Serializer<Endian
     }
 }
 
-impl<'a, Endian: NumSer> ser::SerializeTupleVariant for &'a mut Serializer<Endian> {
+impl<'a, Endian: NumSer> ser::SerializeTupleVariant
+    for &'a mut Serializer<Endian>
+{
     type Ok = ();
     type Error = Error;
 
@@ -312,7 +324,11 @@ impl<'a, Endian: NumSer> ser::SerializeStruct for &'a mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, _key: &'static str, value: &T) -> Result<()>
+    fn serialize_field<T>(
+        &mut self,
+        _key: &'static str,
+        value: &T,
+    ) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
@@ -324,11 +340,17 @@ impl<'a, Endian: NumSer> ser::SerializeStruct for &'a mut Serializer<Endian> {
     }
 }
 
-impl<'a, Endian: NumSer> ser::SerializeStructVariant for &'a mut Serializer<Endian> {
+impl<'a, Endian: NumSer> ser::SerializeStructVariant
+    for &'a mut Serializer<Endian>
+{
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, _key: &'static str, _value: &T) -> Result<()>
+    fn serialize_field<T>(
+        &mut self,
+        _key: &'static str,
+        _value: &T,
+    ) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
@@ -362,7 +384,8 @@ fn test_struct_lv() {
     };
 
     let expected = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, b'm', b'u', b'f', b'f', b'i', b'n', b'\0',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, b'm', b'u', b'f', b'f', b'i', b'n',
+        b'\0',
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
@@ -389,7 +412,8 @@ fn test_struct_str_lv8() {
     };
 
     let expected = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, b'm', b'u', b'f', b'f', b'i', b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, b'm', b'u', b'f', b'f', b'i',
+        b'n',
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
@@ -416,7 +440,8 @@ fn test_struct_str_lv16() {
     };
 
     let expected = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, b'm', b'u', b'f', b'f', b'i', b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, b'm', b'u', b'f', b'f', b'i',
+        b'n',
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
@@ -443,7 +468,8 @@ fn test_struct_str_lv32() {
     };
 
     let expected = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, b'm', b'u', b'f', b'f', b'i', b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, b'm', b'u', b'f', b'f',
+        b'i', b'n',
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
@@ -470,8 +496,8 @@ fn test_struct_str_lv64() {
     };
 
     let expected = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, b'm', b'u', b'f', b'f', b'i',
-        b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, b'm', b'u',
+        b'f', b'f', b'i', b'n',
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
@@ -511,8 +537,8 @@ fn test_nested_struct() {
     };
 
     let expected = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, b'm', b'u', b'f', b'f', b'i',
-        b'n', 3, 57, 48, 0, 0, 254, 91, 10, 0, 0, 0, 0, 0,
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, b'm', b'u',
+        b'f', b'f', b'i', b'n', 3, 57, 48, 0, 0, 254, 91, 10, 0, 0, 0, 0, 0,
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);

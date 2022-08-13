@@ -37,7 +37,7 @@ trait ReadSize {
 
 impl ReadSize for u8 {
     fn read_size<Endian: NumDe>(bytes: &[u8]) -> Result<usize> {
-        match bytes.get(0) {
+        match bytes.first() {
             Some(x) => Ok(*x as usize),
             None => Err(Error::ExpectedInteger),
         }
@@ -46,19 +46,25 @@ impl ReadSize for u8 {
 
 impl ReadSize for u16 {
     fn read_size<Endian: NumDe>(bytes: &[u8]) -> Result<usize> {
-        Ok(Endian::deserialize_u16(bytes.try_into().map_err(|_| Error::ExpectedInteger)?) as usize)
+        Ok(Endian::deserialize_u16(
+            bytes.try_into().map_err(|_| Error::ExpectedInteger)?,
+        ) as usize)
     }
 }
 
 impl ReadSize for u32 {
     fn read_size<Endian: NumDe>(bytes: &[u8]) -> Result<usize> {
-        Ok(Endian::deserialize_u32(bytes.try_into().map_err(|_| Error::ExpectedInteger)?) as usize)
+        Ok(Endian::deserialize_u32(
+            bytes.try_into().map_err(|_| Error::ExpectedInteger)?,
+        ) as usize)
     }
 }
 
 impl ReadSize for u64 {
     fn read_size<Endian: NumDe>(bytes: &[u8]) -> Result<usize> {
-        Ok(Endian::deserialize_u64(bytes.try_into().map_err(|_| Error::ExpectedInteger)?) as usize)
+        Ok(Endian::deserialize_u64(
+            bytes.try_into().map_err(|_| Error::ExpectedInteger)?,
+        ) as usize)
     }
 }
 
@@ -104,13 +110,7 @@ where
 {
     let mut deserializer = Deserializer::<'a, Endian>::from_bytes(b);
     let t = T::deserialize(&mut deserializer)?;
-    if deserializer.input.is_empty() {
-        Ok(t)
-    } else {
-        //println!("warn: trailing bytes: {}", deserializer.input.len());
-        //Err(Error::TrailingBytes);
-        Ok(t)
-    }
+    Ok(t)
 }
 
 pub struct TlvStringVisitor;
@@ -121,7 +121,10 @@ impl<'de> Visitor<'de> for TlvStringVisitor {
         formatter.write_str("a string prifixed by a length")
     }
 
-    fn visit_borrowed_str<E>(self, value: &'de str) -> core::result::Result<Self::Value, E> {
+    fn visit_borrowed_str<E>(
+        self,
+        value: &'de str,
+    ) -> core::result::Result<Self::Value, E> {
         Ok(value.to_string())
     }
 }
@@ -147,16 +150,16 @@ impl<'de, T: serde::Deserialize<'de>> Visitor<'de> for TlvVecVisitor<'de, T> {
         formatter.write_str("an array prifixed by a length")
     }
 
-    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    fn visit_seq<A>(
+        self,
+        mut seq: A,
+    ) -> core::result::Result<Self::Value, A::Error>
     where
         A: SeqAccess<'de>,
     {
         let mut value = Vec::new();
-        loop {
-            match seq.next_element()? {
-                Some(x) => value.push(x),
-                None => break,
-            }
+        while let Some(x) = seq.next_element()? {
+            value.push(x)
         }
         Ok(value)
     }
@@ -199,7 +202,9 @@ impl<'de, 'a, Endian: NumDe> PackedArrayByteSized<'a, 'de, Endian> {
     }
 }
 
-impl<'de, 'a, Endian: NumDe> SeqAccess<'de> for PackedArrayByteSized<'a, 'de, Endian> {
+impl<'de, 'a, Endian: NumDe> SeqAccess<'de>
+    for PackedArrayByteSized<'a, 'de, Endian>
+{
     type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
@@ -217,7 +222,9 @@ impl<'de, 'a, Endian: NumDe> SeqAccess<'de> for PackedArrayByteSized<'a, 'de, En
     }
 }
 
-impl<'de, 'a, Endian: NumDe> de::Deserializer<'de> for &'a mut Deserializer<'de, Endian> {
+impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
+    for &'a mut Deserializer<'de, Endian>
+{
     type Error = Error;
 
     fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value>
@@ -330,10 +337,10 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de> for &'a mut Deserializer<'de,
             }
             i += 1
         }
-        let s = from_utf8(&self.input[..i]).map_err(|_| Error::ExpectedString)?;
+        let s =
+            from_utf8(&self.input[..i]).map_err(|_| Error::ExpectedString)?;
         self.input = &self.input[i + 1..];
-        let res = visitor.visit_borrowed_str(s);
-        res
+        visitor.visit_borrowed_str(s)
     }
 
     fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>
@@ -372,14 +379,22 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de> for &'a mut Deserializer<'de,
         unimplemented!()
     }
 
-    fn deserialize_unit_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value>
+    fn deserialize_unit_struct<V>(
+        self,
+        _name: &'static str,
+        _visitor: V,
+    ) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
         unimplemented!()
     }
 
-    fn deserialize_newtype_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value>
+    fn deserialize_newtype_struct<V>(
+        self,
+        _name: &'static str,
+        _visitor: V,
+    ) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -433,25 +448,25 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de> for &'a mut Deserializer<'de,
                 let n = size_of::<u8>();
                 let len = u8::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1 as usize))
+                visitor.visit_seq(PackedArray::new(self, len + 1))
             }
             "vec16" => {
                 let n = size_of::<u16>();
                 let len = u16::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1 as usize))
+                visitor.visit_seq(PackedArray::new(self, len + 1))
             }
             "vec32" => {
                 let n = size_of::<u32>();
                 let len = u32::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1 as usize))
+                visitor.visit_seq(PackedArray::new(self, len + 1))
             }
             "vec64" => {
                 let n = size_of::<u64>();
                 let len = u64::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1 as usize))
+                visitor.visit_seq(PackedArray::new(self, len + 1))
             }
             "vec8b" => {
                 let n = size_of::<u8>();
@@ -567,7 +582,8 @@ fn test_struct_lv() {
     }
 
     let b = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, b'm', b'u', b'f', b'f', b'i', b'n', b'\0',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, b'm', b'u', b'f', b'f', b'i', b'n',
+        b'\0',
     ];
 
     let expected = Version {
@@ -594,7 +610,8 @@ fn test_struct_str_lv8() {
     }
 
     let b = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, b'm', b'u', b'f', b'f', b'i', b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, b'm', b'u', b'f', b'f', b'i',
+        b'n',
     ];
 
     let expected = Version {
@@ -621,7 +638,8 @@ fn test_struct_str_lv16() {
     }
 
     let b = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, b'm', b'u', b'f', b'f', b'i', b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, b'm', b'u', b'f', b'f', b'i',
+        b'n',
     ];
 
     let expected = Version {
@@ -648,7 +666,8 @@ fn test_struct_str_lv32() {
     }
 
     let b = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, b'm', b'u', b'f', b'f', b'i', b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, b'm', b'u', b'f', b'f',
+        b'i', b'n',
     ];
 
     let expected = Version {
@@ -675,8 +694,8 @@ fn test_struct_str_lv64() {
     }
 
     let b = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, b'm', b'u', b'f', b'f', b'i',
-        b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, b'm', b'u',
+        b'f', b'f', b'i', b'n',
     ];
 
     let expected = Version {
@@ -711,8 +730,8 @@ fn test_nested() {
     }
 
     let b = vec![
-        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, b'm', b'u', b'f', b'f', b'i',
-        b'n', 3, 57, 48, 0, 0, 254, 91, 10, 0, 0, 0, 0, 0,
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, b'm', b'u',
+        b'f', b'f', b'i', b'n', 3, 57, 48, 0, 0, 254, 91, 10, 0, 0, 0, 0, 0,
     ];
 
     let expected = Version {

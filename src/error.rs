@@ -4,14 +4,13 @@
 
 // Copyright 2022 Oxide Computer Company
 
-use std;
 use std::fmt::{self, Display};
 
 use serde::{de, ser};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Error {
     Message(String),
 
@@ -48,9 +47,13 @@ impl Display for Error {
             Error::ExpectedInteger => formatter.write_str("expected integer"),
             Error::ExpectedString => formatter.write_str("expected string"),
             Error::ExpectedNull => formatter.write_str("expected end of null"),
-            Error::ExpectedArray => formatter.write_str("expected end of array"),
+            Error::ExpectedArray => {
+                formatter.write_str("expected end of array")
+            }
             Error::ExpectedEnum => formatter.write_str("expected end of enum"),
-            Error::TrailingBytes => formatter.write_str("unexpected trailing bytes"),
+            Error::TrailingBytes => {
+                formatter.write_str("unexpected trailing bytes")
+            }
         }
     }
 }
