@@ -7,8 +7,8 @@
 use serde::{ser, Serialize};
 use std::marker::PhantomData;
 
-use crate::LittleEndian;
 use crate::error::{Error, Result};
+use crate::LittleEndian;
 
 pub trait NumSer {
     fn serialize_u16(v: u16) -> [u8; 2];
@@ -17,38 +17,43 @@ pub trait NumSer {
 }
 
 impl NumSer for LittleEndian {
-    fn serialize_u16(v: u16) -> [u8; 2] { v.to_le_bytes() }
-    fn serialize_u32(v: u32) -> [u8; 4] { v.to_le_bytes() }
-    fn serialize_u64(v: u64) -> [u8; 8] { v.to_le_bytes() }
+    fn serialize_u16(v: u16) -> [u8; 2] {
+        v.to_le_bytes()
+    }
+    fn serialize_u32(v: u32) -> [u8; 4] {
+        v.to_le_bytes()
+    }
+    fn serialize_u64(v: u64) -> [u8; 8] {
+        v.to_le_bytes()
+    }
 }
 
 pub struct Serializer<Endian: NumSer> {
     output: Vec<u8>,
-    endian: PhantomData::<Endian>,
+    endian: PhantomData<Endian>,
 }
 
-pub fn to_bytes_le<T>(value: &T) -> Result<Vec::<u8>> 
+pub fn to_bytes_le<T>(value: &T) -> Result<Vec<u8>>
 where
-    T: Serialize
+    T: Serialize,
 {
     to_bytes::<LittleEndian, T>(value)
 }
 
-pub fn to_bytes<Endian, T>(value: &T) -> Result<Vec::<u8>>
+pub fn to_bytes<Endian, T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
-    Endian: NumSer
+    Endian: NumSer,
 {
-    let mut serializer = Serializer{
+    let mut serializer = Serializer {
         output: Vec::new(),
-        endian: PhantomData::<Endian>{},
+        endian: PhantomData::<Endian> {},
     };
     value.serialize(&mut serializer)?;
     Ok(serializer.output)
 }
 
 impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
-
     type Ok = ();
     type Error = Error;
 
@@ -122,12 +127,9 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         unimplemented!()
     }
 
-    fn serialize_some<T: ?Sized>(
-        self,
-        _value: &T
-    ) -> Result<Self::Ok>
+    fn serialize_some<T: ?Sized>(self, _value: &T) -> Result<Self::Ok>
     where
-        T: Serialize
+        T: Serialize,
     {
         unimplemented!()
     }
@@ -136,11 +138,7 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         unimplemented!()
     }
 
-    fn serialize_unit_struct(
-        self,
-        _name: &'static str
-    ) -> Result<Self::Ok>
-    {
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<Self::Ok> {
         unimplemented!()
     }
 
@@ -148,7 +146,7 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         self,
         _name: &'static str,
         _variant_index: u32,
-        _variant: &'static str
+        _variant: &'static str,
     ) -> Result<Self::Ok> {
         println!("{} {} {}", _name, _variant_index, _variant);
         unimplemented!()
@@ -157,10 +155,10 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
     fn serialize_newtype_struct<T: ?Sized>(
         self,
         _name: &'static str,
-        _value: &T
+        _value: &T,
     ) -> Result<Self::Ok>
     where
-        T: Serialize
+        T: Serialize,
     {
         unimplemented!()
     }
@@ -170,33 +168,27 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         _name: &'static str,
         _variant_index: u32,
         _variant: &'static str,
-        _value: &T
+        _value: &T,
     ) -> Result<Self::Ok>
     where
-        T: Serialize
+        T: Serialize,
     {
         unimplemented!()
     }
 
-    fn serialize_seq(
-        self,
-        _len: Option<usize>
-    ) -> Result<Self::SerializeSeq> {
+    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
         Ok(self)
     }
 
-    fn serialize_tuple(
-        self,
-        _len: usize
-    ) -> Result<Self::SerializeTuple> {
+    fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
         Ok(self)
     }
 
     fn serialize_tuple_struct(
         self,
         _name: &'static str,
-        _len: usize
-    ) -> Result<Self::SerializeTupleStruct>{
+        _len: usize,
+    ) -> Result<Self::SerializeTupleStruct> {
         Ok(self)
     }
 
@@ -205,23 +197,16 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         _name: &'static str,
         _variant_index: u32,
         _variant: &'static str,
-        _len: usize
+        _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
         Ok(self)
     }
 
-    fn serialize_map(
-        self,
-        _len: Option<usize>
-    ) -> Result<Self::SerializeMap> {
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
         unimplemented!()
     }
 
-    fn serialize_struct(
-        self,
-        _name: &'static str,
-        _len: usize
-    ) -> Result<Self::SerializeStruct> {
+    fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
         Ok(self)
     }
 
@@ -230,15 +215,13 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         _name: &'static str,
         _variant_index: u32,
         _variant: &'static str,
-        _len: usize
+        _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         Ok(self)
     }
-
 }
 
 impl<'a, Endian: NumSer> ser::SerializeSeq for &'a mut Serializer<Endian> {
-
     type Ok = ();
     type Error = Error;
 
@@ -252,11 +235,9 @@ impl<'a, Endian: NumSer> ser::SerializeSeq for &'a mut Serializer<Endian> {
     fn end(self) -> Result<()> {
         Ok(())
     }
-
 }
 
 impl<'a, Endian: NumSer> ser::SerializeTuple for &'a mut Serializer<Endian> {
-
     type Ok = ();
     type Error = Error;
 
@@ -270,12 +251,9 @@ impl<'a, Endian: NumSer> ser::SerializeTuple for &'a mut Serializer<Endian> {
     fn end(self) -> Result<()> {
         Ok(())
     }
-
 }
 
-impl<'a, Endian: NumSer>
-ser::SerializeTupleStruct for &'a mut Serializer<Endian> {
-
+impl<'a, Endian: NumSer> ser::SerializeTupleStruct for &'a mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
@@ -289,12 +267,9 @@ ser::SerializeTupleStruct for &'a mut Serializer<Endian> {
     fn end(self) -> Result<()> {
         unimplemented!()
     }
-
 }
 
-impl<'a, Endian: NumSer>
-ser::SerializeTupleVariant for &'a mut Serializer<Endian> {
-
+impl<'a, Endian: NumSer> ser::SerializeTupleVariant for &'a mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
@@ -308,11 +283,9 @@ ser::SerializeTupleVariant for &'a mut Serializer<Endian> {
     fn end(self) -> Result<()> {
         unimplemented!()
     }
-
 }
 
 impl<'a, Endian: NumSer> ser::SerializeMap for &'a mut Serializer<Endian> {
-
     type Ok = ();
     type Error = Error;
 
@@ -335,14 +308,11 @@ impl<'a, Endian: NumSer> ser::SerializeMap for &'a mut Serializer<Endian> {
     }
 }
 
-impl<'a, Endian: NumSer>
-ser::SerializeStruct for &'a mut Serializer<Endian> {
-
+impl<'a, Endian: NumSer> ser::SerializeStruct for &'a mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, _key: &'static str, value: &T)
-    -> Result<()>
+    fn serialize_field<T>(&mut self, _key: &'static str, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
@@ -352,16 +322,13 @@ ser::SerializeStruct for &'a mut Serializer<Endian> {
     fn end(self) -> Result<()> {
         Ok(())
     }
-
 }
 
-impl<'a, Endian: NumSer>
-ser::SerializeStructVariant for &'a mut Serializer<Endian> {
+impl<'a, Endian: NumSer> ser::SerializeStructVariant for &'a mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, _key: &'static str, _value: &T)
-    -> Result<()>
+    fn serialize_field<T>(&mut self, _key: &'static str, _value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
@@ -377,7 +344,6 @@ ser::SerializeStructVariant for &'a mut Serializer<Endian> {
 
 #[test]
 fn test_struct_lv() {
-
     #[derive(Serialize)]
     struct Version {
         size: u32,
@@ -387,7 +353,7 @@ fn test_struct_lv() {
         version: String,
     }
 
-    let v = Version{
+    let v = Version {
         size: 47,
         typ: 9,
         tag: 15,
@@ -396,20 +362,14 @@ fn test_struct_lv() {
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        99, 0, 0, 0,
-        b'm', b'u', b'f', b'f', b'i', b'n', b'\0',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, b'm', b'u', b'f', b'f', b'i', b'n', b'\0',
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_str_lv8() {
-
     #[derive(Serialize)]
     struct Version {
         size: u32,
@@ -420,7 +380,7 @@ fn test_struct_str_lv8() {
         version: String,
     }
 
-    let v = Version{
+    let v = Version {
         size: 47,
         typ: 9,
         tag: 15,
@@ -429,21 +389,14 @@ fn test_struct_str_lv8() {
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        99, 0, 0, 0,
-        6,
-        b'm', b'u', b'f', b'f', b'i', b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, b'm', b'u', b'f', b'f', b'i', b'n',
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_str_lv16() {
-
     #[derive(Serialize)]
     struct Version {
         size: u32,
@@ -454,7 +407,7 @@ fn test_struct_str_lv16() {
         version: String,
     }
 
-    let v = Version{
+    let v = Version {
         size: 47,
         typ: 9,
         tag: 15,
@@ -463,21 +416,14 @@ fn test_struct_str_lv16() {
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        99, 0, 0, 0,
-        6, 0,
-        b'm', b'u', b'f', b'f', b'i', b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, b'm', b'u', b'f', b'f', b'i', b'n',
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_str_lv32() {
-
     #[derive(Serialize)]
     struct Version {
         size: u32,
@@ -488,7 +434,7 @@ fn test_struct_str_lv32() {
         version: String,
     }
 
-    let v = Version{
+    let v = Version {
         size: 47,
         typ: 9,
         tag: 15,
@@ -497,21 +443,14 @@ fn test_struct_str_lv32() {
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        99, 0, 0, 0,
-        6, 0, 0, 0,
-        b'm', b'u', b'f', b'f', b'i', b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, b'm', b'u', b'f', b'f', b'i', b'n',
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_str_lv64() {
-
     #[derive(Serialize)]
     struct Version {
         size: u32,
@@ -522,7 +461,7 @@ fn test_struct_str_lv64() {
         version: String,
     }
 
-    let v = Version{
+    let v = Version {
         size: 47,
         typ: 9,
         tag: 15,
@@ -531,21 +470,15 @@ fn test_struct_str_lv64() {
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        99, 0, 0, 0,
-        6, 0, 0, 0, 0, 0, 0, 0,
-        b'm', b'u', b'f', b'f', b'i', b'n',
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, b'm', b'u', b'f', b'f', b'i',
+        b'n',
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
-
 }
 
 #[test]
 fn test_nested_struct() {
-
     #[derive(Serialize)]
     struct Version {
         size: u32,
@@ -561,41 +494,32 @@ fn test_nested_struct() {
     struct Info {
         typ: u8,
         version: u32,
-        path: u64
+        path: u64,
     }
 
-    let v = Version{
+    let v = Version {
         size: 47,
         typ: 9,
         tag: 15,
         msize: 99,
         version: "muffin".into(),
-        info: Info{
+        info: Info {
             typ: 3,
             version: 12345,
             path: 678910,
-        }
+        },
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        99, 0, 0, 0,
-        6, 0, 0, 0, 0, 0, 0, 0,
-        b'm', b'u', b'f', b'f', b'i', b'n',
-        3,
-        57, 48, 0, 0,
-        254, 91, 10, 0, 0, 0, 0, 0,
+        47, 0, 0, 0, 9, 15, 0, 99, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, b'm', b'u', b'f', b'f', b'i',
+        b'n', 3, 57, 48, 0, 0, 254, 91, 10, 0, 0, 0, 0, 0,
     ];
 
     assert_eq!(to_bytes_le(&v).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_vec_lv8() {
-
     #[derive(Debug, Serialize, PartialEq)]
     pub struct Rreaddir {
         pub size: u32,
@@ -613,43 +537,43 @@ fn test_struct_vec_lv8() {
         pub name: String,
     }
 
-    let r = Rreaddir{
+    let r = Rreaddir {
         size: 47,
         typ: 9,
         tag: 15,
         data: vec![
-            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
-            Dirent{offset: 73, typ: 9, name: "muffin".into()},
-        ]
+            Dirent {
+                offset: 37,
+                typ: 2,
+                name: "blueberry".into(),
+            },
+            Dirent {
+                offset: 73,
+                typ: 9,
+                name: "muffin".into(),
+            },
+        ],
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        2, // len
-        
+        47, 0, 0, 0, 9, 15, 0, 2, // len
         // .1
-        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
-        2,                                                    // typ
-        9, 0,                                                 // name.len
+        37, 0, 0, 0, 0, 0, 0, 0, // offset
+        2, // typ
+        9, 0, // name.len
         b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
-
         // .2
-        73, 0, 0, 0, 0, 0, 0, 0,            // offset
-        9,                                  // typ
-        6, 0,                               // name.len
+        73, 0, 0, 0, 0, 0, 0, 0, // offset
+        9, // typ
+        6, 0, // name.len
         b'm', b'u', b'f', b'f', b'i', b'n', //name
     ];
 
-
     assert_eq!(to_bytes_le(&r).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_vec_lv16() {
-
     #[derive(Debug, Serialize, PartialEq)]
     pub struct Rreaddir {
         pub size: u32,
@@ -667,43 +591,43 @@ fn test_struct_vec_lv16() {
         pub name: String,
     }
 
-    let r = Rreaddir{
+    let r = Rreaddir {
         size: 47,
         typ: 9,
         tag: 15,
         data: vec![
-            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
-            Dirent{offset: 73, typ: 9, name: "muffin".into()},
-        ]
+            Dirent {
+                offset: 37,
+                typ: 2,
+                name: "blueberry".into(),
+            },
+            Dirent {
+                offset: 73,
+                typ: 9,
+                name: "muffin".into(),
+            },
+        ],
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        2, 0, // len
-        
+        47, 0, 0, 0, 9, 15, 0, 2, 0, // len
         // .1
-        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
-        2,                                                    // typ
-        9, 0,                                                 // name.len
+        37, 0, 0, 0, 0, 0, 0, 0, // offset
+        2, // typ
+        9, 0, // name.len
         b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
-
         // .2
-        73, 0, 0, 0, 0, 0, 0, 0,            // offset
-        9,                                  // typ
-        6, 0,                               // name.len
+        73, 0, 0, 0, 0, 0, 0, 0, // offset
+        9, // typ
+        6, 0, // name.len
         b'm', b'u', b'f', b'f', b'i', b'n', //name
     ];
 
-
     assert_eq!(to_bytes_le(&r).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_vec_lv32() {
-
     #[derive(Debug, Serialize, PartialEq)]
     pub struct Rreaddir {
         pub size: u32,
@@ -721,43 +645,43 @@ fn test_struct_vec_lv32() {
         pub name: String,
     }
 
-    let r = Rreaddir{
+    let r = Rreaddir {
         size: 47,
         typ: 9,
         tag: 15,
         data: vec![
-            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
-            Dirent{offset: 73, typ: 9, name: "muffin".into()},
-        ]
+            Dirent {
+                offset: 37,
+                typ: 2,
+                name: "blueberry".into(),
+            },
+            Dirent {
+                offset: 73,
+                typ: 9,
+                name: "muffin".into(),
+            },
+        ],
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        2, 0, 0, 0, // len
-        
+        47, 0, 0, 0, 9, 15, 0, 2, 0, 0, 0, // len
         // .1
-        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
-        2,                                                    // typ
-        9, 0,                                                 // name.len
+        37, 0, 0, 0, 0, 0, 0, 0, // offset
+        2, // typ
+        9, 0, // name.len
         b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
-
         // .2
-        73, 0, 0, 0, 0, 0, 0, 0,            // offset
-        9,                                  // typ
-        6, 0,                               // name.len
+        73, 0, 0, 0, 0, 0, 0, 0, // offset
+        9, // typ
+        6, 0, // name.len
         b'm', b'u', b'f', b'f', b'i', b'n', //name
     ];
 
-
     assert_eq!(to_bytes_le(&r).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_vec_lv64() {
-
     #[derive(Debug, Serialize, PartialEq)]
     pub struct Rreaddir {
         pub size: u32,
@@ -775,43 +699,43 @@ fn test_struct_vec_lv64() {
         pub name: String,
     }
 
-    let r = Rreaddir{
+    let r = Rreaddir {
         size: 47,
         typ: 9,
         tag: 15,
         data: vec![
-            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
-            Dirent{offset: 73, typ: 9, name: "muffin".into()},
-        ]
+            Dirent {
+                offset: 37,
+                typ: 2,
+                name: "blueberry".into(),
+            },
+            Dirent {
+                offset: 73,
+                typ: 9,
+                name: "muffin".into(),
+            },
+        ],
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        2, 0, 0, 0, 0, 0, 0, 0, // len
-        
+        47, 0, 0, 0, 9, 15, 0, 2, 0, 0, 0, 0, 0, 0, 0, // len
         // .1
-        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
-        2,                                                    // typ
-        9, 0,                                                 // name.len
+        37, 0, 0, 0, 0, 0, 0, 0, // offset
+        2, // typ
+        9, 0, // name.len
         b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
-
         // .2
-        73, 0, 0, 0, 0, 0, 0, 0,            // offset
-        9,                                  // typ
-        6, 0,                               // name.len
+        73, 0, 0, 0, 0, 0, 0, 0, // offset
+        9, // typ
+        6, 0, // name.len
         b'm', b'u', b'f', b'f', b'i', b'n', //name
     ];
 
-
     assert_eq!(to_bytes_le(&r).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_vec_lv8b() {
-
     #[derive(Debug, Serialize, PartialEq)]
     pub struct Rreaddir {
         pub size: u32,
@@ -836,47 +760,47 @@ fn test_struct_vec_lv8b() {
                 + size_of::<u8>()   // typ
                 + size_of::<u16>()  // name.len TODO: awkward, user specifying
                                     //                serde inserted value
-                + self.name.len()   // name
+                + self.name.len() // name
         }
     }
 
-    let r = Rreaddir{
+    let r = Rreaddir {
         size: 47,
         typ: 9,
         tag: 15,
         data: vec![
-            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
-            Dirent{offset: 73, typ: 9, name: "muffin".into()},
-        ]
+            Dirent {
+                offset: 37,
+                typ: 2,
+                name: "blueberry".into(),
+            },
+            Dirent {
+                offset: 73,
+                typ: 9,
+                name: "muffin".into(),
+            },
+        ],
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        37, // len
-        
+        47, 0, 0, 0, 9, 15, 0, 37, // len
         // .1
-        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
-        2,                                                    // typ
-        9, 0,                                                 // name.len
+        37, 0, 0, 0, 0, 0, 0, 0, // offset
+        2, // typ
+        9, 0, // name.len
         b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
-
         // .2
-        73, 0, 0, 0, 0, 0, 0, 0,            // offset
-        9,                                  // typ
-        6, 0,                               // name.len
+        73, 0, 0, 0, 0, 0, 0, 0, // offset
+        9, // typ
+        6, 0, // name.len
         b'm', b'u', b'f', b'f', b'i', b'n', //name
     ];
 
-
     assert_eq!(to_bytes_le(&r).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_vec_lv16b() {
-
     #[derive(Debug, Serialize, PartialEq)]
     pub struct Rreaddir {
         pub size: u32,
@@ -901,47 +825,47 @@ fn test_struct_vec_lv16b() {
                 + size_of::<u8>()   // typ
                 + size_of::<u16>()  // name.len TODO: awkward, user specifying
                                     //                serde inserted value
-                + self.name.len()   // name
+                + self.name.len() // name
         }
     }
 
-    let r = Rreaddir{
+    let r = Rreaddir {
         size: 47,
         typ: 9,
         tag: 15,
         data: vec![
-            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
-            Dirent{offset: 73, typ: 9, name: "muffin".into()},
-        ]
+            Dirent {
+                offset: 37,
+                typ: 2,
+                name: "blueberry".into(),
+            },
+            Dirent {
+                offset: 73,
+                typ: 9,
+                name: "muffin".into(),
+            },
+        ],
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        37, 0, // len
-        
+        47, 0, 0, 0, 9, 15, 0, 37, 0, // len
         // .1
-        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
-        2,                                                    // typ
-        9, 0,                                                 // name.len
+        37, 0, 0, 0, 0, 0, 0, 0, // offset
+        2, // typ
+        9, 0, // name.len
         b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
-
         // .2
-        73, 0, 0, 0, 0, 0, 0, 0,            // offset
-        9,                                  // typ
-        6, 0,                               // name.len
+        73, 0, 0, 0, 0, 0, 0, 0, // offset
+        9, // typ
+        6, 0, // name.len
         b'm', b'u', b'f', b'f', b'i', b'n', //name
     ];
 
-
     assert_eq!(to_bytes_le(&r).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_vec_lv32b() {
-
     #[derive(Debug, Serialize, PartialEq)]
     pub struct Rreaddir {
         pub size: u32,
@@ -966,47 +890,47 @@ fn test_struct_vec_lv32b() {
                 + size_of::<u8>()   // typ
                 + size_of::<u16>()  // name.len TODO: awkward, user specifying
                                     //                serde inserted value
-                + self.name.len()   // name
+                + self.name.len() // name
         }
     }
 
-    let r = Rreaddir{
+    let r = Rreaddir {
         size: 47,
         typ: 9,
         tag: 15,
         data: vec![
-            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
-            Dirent{offset: 73, typ: 9, name: "muffin".into()},
-        ]
+            Dirent {
+                offset: 37,
+                typ: 2,
+                name: "blueberry".into(),
+            },
+            Dirent {
+                offset: 73,
+                typ: 9,
+                name: "muffin".into(),
+            },
+        ],
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        37, 0, 0, 0, // len
-        
+        47, 0, 0, 0, 9, 15, 0, 37, 0, 0, 0, // len
         // .1
-        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
-        2,                                                    // typ
-        9, 0,                                                 // name.len
+        37, 0, 0, 0, 0, 0, 0, 0, // offset
+        2, // typ
+        9, 0, // name.len
         b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
-
         // .2
-        73, 0, 0, 0, 0, 0, 0, 0,            // offset
-        9,                                  // typ
-        6, 0,                               // name.len
+        73, 0, 0, 0, 0, 0, 0, 0, // offset
+        9, // typ
+        6, 0, // name.len
         b'm', b'u', b'f', b'f', b'i', b'n', //name
     ];
 
-
     assert_eq!(to_bytes_le(&r).unwrap(), expected);
-
 }
 
 #[test]
 fn test_struct_vec_lv64b() {
-
     #[derive(Debug, Serialize, PartialEq)]
     pub struct Rreaddir {
         pub size: u32,
@@ -1031,40 +955,41 @@ fn test_struct_vec_lv64b() {
                 + size_of::<u8>()   // typ
                 + size_of::<u16>()  // name.len TODO: awkward, user specifying
                                     //                serde inserted value
-                + self.name.len()   // name
+                + self.name.len() // name
         }
     }
 
-    let r = Rreaddir{
+    let r = Rreaddir {
         size: 47,
         typ: 9,
         tag: 15,
         data: vec![
-            Dirent{offset: 37, typ: 2, name: "blueberry".into()},
-            Dirent{offset: 73, typ: 9, name: "muffin".into()},
-        ]
+            Dirent {
+                offset: 37,
+                typ: 2,
+                name: "blueberry".into(),
+            },
+            Dirent {
+                offset: 73,
+                typ: 9,
+                name: "muffin".into(),
+            },
+        ],
     };
 
     let expected = vec![
-        47, 0, 0, 0,
-        9,
-        15, 0,
-        37, 0, 0, 0, 0, 0, 0, 0, // len
-        
+        47, 0, 0, 0, 9, 15, 0, 37, 0, 0, 0, 0, 0, 0, 0, // len
         // .1
-        37, 0, 0, 0, 0, 0, 0, 0,                              // offset
-        2,                                                    // typ
-        9, 0,                                                 // name.len
+        37, 0, 0, 0, 0, 0, 0, 0, // offset
+        2, // typ
+        9, 0, // name.len
         b'b', b'l', b'u', b'e', b'b', b'e', b'r', b'r', b'y', // name
-
         // .2
-        73, 0, 0, 0, 0, 0, 0, 0,            // offset
-        9,                                  // typ
-        6, 0,                               // name.len
+        73, 0, 0, 0, 0, 0, 0, 0, // offset
+        9, // typ
+        6, 0, // name.len
         b'm', b'u', b'f', b'f', b'i', b'n', //name
     ];
 
-
     assert_eq!(to_bytes_le(&r).unwrap(), expected);
-
 }

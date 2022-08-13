@@ -4,8 +4,8 @@
 
 // Copyright 2022 Oxide Computer Company
 
-use ispf::{to_bytes_le, from_bytes_le};
-use serde::{Serialize, Deserialize};
+use ispf::{from_bytes_le, to_bytes_le};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct Version {
@@ -17,9 +17,8 @@ struct Version {
     version: String,
 }
 
-fn main() -> Result<(), ispf::Error>{
-
-    let v = Version{
+fn main() -> Result<(), ispf::Error> {
+    let v = Version {
         size: 47,
         typ: 9,
         tag: 15,
@@ -35,5 +34,4 @@ fn main() -> Result<(), ispf::Error>{
     assert_eq!(v, full_circle);
 
     Ok(())
-
 }

@@ -51,7 +51,6 @@ impl Display for Error {
             Error::ExpectedArray => formatter.write_str("expected end of array"),
             Error::ExpectedEnum => formatter.write_str("expected end of enum"),
             Error::TrailingBytes => formatter.write_str("unexpected trailing bytes"),
-
         }
     }
 }
