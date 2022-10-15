@@ -42,7 +42,7 @@ The annotation on `version` in this data structure indicates that `version`
 should be serialized as a length-value pair with a 16-bit unsigned integer as
 the length.
 
-A basic round trip to and from wire format is perfomred as the following
+A basic round trip to and from wire format is performed as the following
 ([full example](examples/main.rs)).
 
 ```rust
@@ -63,7 +63,7 @@ assert_eq!(v, full_circle);
 ```
 
 So the basic thing that ISPF does is create packed wire representations for Rust
-data types and provides a cofigurable means by which to represent types that are
+data types and provides a configurable means by which to represent types that are
 not statically sized, such as the `ispf::str_lv64` serializer annotation above.
 
 ## Available Formatters
@@ -93,7 +93,7 @@ Length value represents number of elements in the vector.
 - `vec_lv32b`
 - `vec_lv64b`
 
-Length value represents number of total bytes in the vector (the sume of the
+Length value represents number of total bytes in the vector (the sum of the
 size of the elements).
 
 ## Building
