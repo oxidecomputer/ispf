@@ -8,12 +8,14 @@ use serde::{ser, Serialize};
 use std::marker::PhantomData;
 
 use crate::error::{Error, Result};
+use crate::BigEndian;
 use crate::LittleEndian;
 
 pub trait NumSer {
     fn serialize_u16(v: u16) -> [u8; 2];
     fn serialize_u32(v: u32) -> [u8; 4];
     fn serialize_u64(v: u64) -> [u8; 8];
+    fn serialize_u128(v: u128) -> [u8; 16];
 }
 
 impl NumSer for LittleEndian {
@@ -25,6 +27,24 @@ impl NumSer for LittleEndian {
     }
     fn serialize_u64(v: u64) -> [u8; 8] {
         v.to_le_bytes()
+    }
+    fn serialize_u128(v: u128) -> [u8; 16] {
+        v.to_le_bytes()
+    }
+}
+
+impl NumSer for BigEndian {
+    fn serialize_u16(v: u16) -> [u8; 2] {
+        v.to_be_bytes()
+    }
+    fn serialize_u32(v: u32) -> [u8; 4] {
+        v.to_be_bytes()
+    }
+    fn serialize_u64(v: u64) -> [u8; 8] {
+        v.to_be_bytes()
+    }
+    fn serialize_u128(v: u128) -> [u8; 16] {
+        v.to_be_bytes()
     }
 }
 
@@ -38,6 +58,13 @@ where
     T: Serialize,
 {
     to_bytes::<LittleEndian, T>(value)
+}
+
+pub fn to_bytes_be<T>(value: &T) -> Result<Vec<u8>>
+where
+    T: Serialize,
+{
+    to_bytes::<BigEndian, T>(value)
 }
 
 pub fn to_bytes<Endian, T>(value: &T) -> Result<Vec<u8>>

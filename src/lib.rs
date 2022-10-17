@@ -10,9 +10,10 @@ mod ser;
 
 pub use de::{from_bytes, from_bytes_le, Deserializer};
 pub use error::{Error, Result};
-pub use ser::{to_bytes, to_bytes_le, Serializer};
+pub use ser::{to_bytes, to_bytes_be, to_bytes_le, Serializer};
 
 pub struct LittleEndian {}
+pub struct BigEndian {}
 
 pub mod str_lv8 {
     use serde::ser::SerializeTuple;

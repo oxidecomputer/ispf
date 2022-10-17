@@ -15,11 +15,10 @@ cargo --version
 rustc --version
 
 banner build
-ptime -m cargo build
+cargo build
 
 cargo fmt -- --check
-cargo clippy
-cargo check
+cargo clippy -- --deny warnings
 
 banner test
 cargo test
