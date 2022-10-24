@@ -9,7 +9,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::str::from_utf8;
 
-use crate::LittleEndian;
+use crate::{BigEndian, LittleEndian};
 use serde::de::{self, DeserializeSeed, SeqAccess, Visitor};
 use serde::Deserialize;
 
@@ -17,6 +17,7 @@ pub trait NumDe {
     fn deserialize_u16(v: [u8; 2]) -> u16;
     fn deserialize_u32(v: [u8; 4]) -> u32;
     fn deserialize_u64(v: [u8; 8]) -> u64;
+    fn deserialize_u128(v: [u8; 16]) -> u128;
 }
 
 impl NumDe for LittleEndian {
@@ -28,6 +29,24 @@ impl NumDe for LittleEndian {
     }
     fn deserialize_u64(v: [u8; 8]) -> u64 {
         u64::from_le_bytes(v)
+    }
+    fn deserialize_u128(v: [u8; 16]) -> u128 {
+        u128::from_le_bytes(v)
+    }
+}
+
+impl NumDe for BigEndian {
+    fn deserialize_u16(v: [u8; 2]) -> u16 {
+        u16::from_le_bytes(v)
+    }
+    fn deserialize_u32(v: [u8; 4]) -> u32 {
+        u32::from_le_bytes(v)
+    }
+    fn deserialize_u64(v: [u8; 8]) -> u64 {
+        u64::from_le_bytes(v)
+    }
+    fn deserialize_u128(v: [u8; 16]) -> u128 {
+        u128::from_be_bytes(v)
     }
 }
 
@@ -101,6 +120,13 @@ where
     T: Deserialize<'a>,
 {
     from_bytes::<'a, LittleEndian, T>(b)
+}
+
+pub fn from_bytes_be<'a, T>(b: &'a [u8]) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    from_bytes::<'a, BigEndian, T>(b)
 }
 
 pub fn from_bytes<'a, Endian, T>(b: &'a [u8]) -> Result<T>
