@@ -37,13 +37,13 @@ impl NumDe for LittleEndian {
 
 impl NumDe for BigEndian {
     fn deserialize_u16(v: [u8; 2]) -> u16 {
-        u16::from_le_bytes(v)
+        u16::from_be_bytes(v)
     }
     fn deserialize_u32(v: [u8; 4]) -> u32 {
-        u32::from_le_bytes(v)
+        u32::from_be_bytes(v)
     }
     fn deserialize_u64(v: [u8; 8]) -> u64 {
-        u64::from_le_bytes(v)
+        u64::from_be_bytes(v)
     }
     fn deserialize_u128(v: [u8; 16]) -> u128 {
         u128::from_be_bytes(v)
@@ -498,25 +498,25 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
                 let n = size_of::<u8>();
                 let len = u8::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArrayByteSized::new(self, len as usize))
+                visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
             "vec16b" => {
                 let n = size_of::<u16>();
                 let len = u16::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArrayByteSized::new(self, len as usize))
+                visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
             "vec32b" => {
                 let n = size_of::<u32>();
                 let len = u32::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArrayByteSized::new(self, len as usize))
+                visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
             "vec64b" => {
                 let n = size_of::<u64>();
                 let len = u64::read_size::<Endian>(&self.input[..n])?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArrayByteSized::new(self, len as usize))
+                visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
             s => {
                 unimplemented!("{}", s)
