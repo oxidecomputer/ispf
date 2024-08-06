@@ -199,12 +199,12 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         _name: &'static str,
         _variant_index: u32,
         _variant: &'static str,
-        _value: &T,
+        value: &T,
     ) -> Result<Self::Ok>
     where
         T: Serialize,
     {
-        unimplemented!()
+        value.serialize(self)
     }
 
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
