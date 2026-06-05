@@ -107,10 +107,13 @@ impl<'de, Endian: NumDe> Deserializer<'de, Endian> {
 
         let n = size_of::<T>();
 
-        let len = T::read_size::<Endian>(&self.input[..n])?;
-        let s = from_utf8(&self.input[n..n + len]).map_err(|_| Error::Eof)?;
+        let len =
+            T::read_size::<Endian>(self.input.get(..n).ok_or(Error::Eof)?)?;
+        let end = n.checked_add(len).ok_or(Error::Eof)?;
+        let s = from_utf8(self.input.get(n..end).ok_or(Error::Eof)?)
+            .map_err(|_| Error::Eof)?;
 
-        self.input = &self.input[n + len..];
+        self.input = &self.input[end..];
         Ok(s)
     }
 }
@@ -209,10 +212,10 @@ impl<'de, 'a, Endian: NumDe> SeqAccess<'de> for PackedArray<'a, 'de, Endian> {
     where
         T: DeserializeSeed<'de>,
     {
-        self.count -= 1;
         if self.count == 0 {
             return Ok(None);
         }
+        self.count -= 1;
         seed.deserialize(&mut *self.de).map(Some)
     }
 }
@@ -243,7 +246,8 @@ impl<'de, 'a, Endian: NumDe> SeqAccess<'de>
         let before = self.de.input.len();
         let res = seed.deserialize(&mut *self.de).map(Some);
         let after = self.de.input.len();
-        self.bytes -= before - after;
+        self.bytes =
+            self.bytes.checked_sub(before - after).ok_or(Error::Eof)?;
         res
     }
 }
@@ -299,7 +303,7 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
     where
         V: Visitor<'de>,
     {
-        let byte = self.input[0];
+        let byte = *self.input.first().ok_or(Error::Eof)?;
         self.input = &self.input[1..];
         visitor.visit_u8(byte)
     }
@@ -308,7 +312,12 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
     where
         V: Visitor<'de>,
     {
-        let bytes = self.input[..2].try_into().map_err(|_| Error::Eof)?;
+        let bytes = self
+            .input
+            .get(..2)
+            .ok_or(Error::Eof)?
+            .try_into()
+            .map_err(|_| Error::Eof)?;
         self.input = &self.input[2..];
         visitor.visit_u16(Endian::deserialize_u16(bytes))
     }
@@ -317,7 +326,12 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
     where
         V: Visitor<'de>,
     {
-        let bytes = self.input[..4].try_into().map_err(|_| Error::Eof)?;
+        let bytes = self
+            .input
+            .get(..4)
+            .ok_or(Error::Eof)?
+            .try_into()
+            .map_err(|_| Error::Eof)?;
         self.input = &self.input[4..];
         visitor.visit_u32(Endian::deserialize_u32(bytes))
     }
@@ -326,7 +340,12 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
     where
         V: Visitor<'de>,
     {
-        let bytes = self.input[..8].try_into().map_err(|_| Error::Eof)?;
+        let bytes = self
+            .input
+            .get(..8)
+            .ok_or(Error::Eof)?
+            .try_into()
+            .map_err(|_| Error::Eof)?;
         self.input = &self.input[8..];
         visitor.visit_u64(Endian::deserialize_u64(bytes))
     }
@@ -356,13 +375,11 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
     where
         V: Visitor<'de>,
     {
-        let mut i = 0;
-        loop {
-            if self.input[i] == b'\0' {
-                break;
-            }
-            i += 1
-        }
+        let i = self
+            .input
+            .iter()
+            .position(|&b| b == b'\0')
+            .ok_or(Error::Eof)?;
         let s =
             from_utf8(&self.input[..i]).map_err(|_| Error::ExpectedString)?;
         self.input = &self.input[i + 1..];
@@ -472,49 +489,65 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
             }
             "vec8" => {
                 let n = size_of::<u8>();
-                let len = u8::read_size::<Endian>(&self.input[..n])?;
+                let len = u8::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1))
+                visitor.visit_seq(PackedArray::new(self, len))
             }
             "vec16" => {
                 let n = size_of::<u16>();
-                let len = u16::read_size::<Endian>(&self.input[..n])?;
+                let len = u16::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1))
+                visitor.visit_seq(PackedArray::new(self, len))
             }
             "vec32" => {
                 let n = size_of::<u32>();
-                let len = u32::read_size::<Endian>(&self.input[..n])?;
+                let len = u32::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1))
+                visitor.visit_seq(PackedArray::new(self, len))
             }
             "vec64" => {
                 let n = size_of::<u64>();
-                let len = u64::read_size::<Endian>(&self.input[..n])?;
+                let len = u64::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1))
+                visitor.visit_seq(PackedArray::new(self, len))
             }
             "vec8b" => {
                 let n = size_of::<u8>();
-                let len = u8::read_size::<Endian>(&self.input[..n])?;
+                let len = u8::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
             "vec16b" => {
                 let n = size_of::<u16>();
-                let len = u16::read_size::<Endian>(&self.input[..n])?;
+                let len = u16::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
             "vec32b" => {
                 let n = size_of::<u32>();
-                let len = u32::read_size::<Endian>(&self.input[..n])?;
+                let len = u32::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
             "vec64b" => {
                 let n = size_of::<u64>();
-                let len = u64::read_size::<Endian>(&self.input[..n])?;
+                let len = u64::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
