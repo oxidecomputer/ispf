@@ -1207,3 +1207,123 @@ fn test_struct_vec_lv64b() {
 
     assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());
 }
+
+#[test]
+fn test_truncated_ints_return_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct Wide {
+        a: u8,
+        b: u16,
+        c: u32,
+        d: u64,
+    }
+
+    // Every prefix shorter than the full 15-byte encoding must yield Eof
+    // rather than panicking on an out-of-bounds slice.
+    let full = vec![1, 2, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0];
+    for n in 0..full.len() {
+        let res: Result<Wide> = from_bytes_le(&full[..n]);
+        assert!(matches!(res, Err(Error::Eof)), "len {} should be Eof", n);
+    }
+    assert!(from_bytes_le::<Wide>(&full).is_ok());
+}
+
+#[test]
+fn test_unterminated_str_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct S {
+        s: String,
+    }
+
+    // No NUL terminator: must return Eof instead of walking past the end.
+    let b = vec![b'm', b'u', b'f', b'f', b'i', b'n'];
+    let res: Result<S> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_truncated_tlv_string_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct S {
+        #[serde(with = "crate::str_lv16")]
+        s: String,
+    }
+
+    // Length prefix claims 6 bytes but the buffer is truncated.
+    let b = vec![6, 0, b'm', b'u', b'f'];
+    let res: Result<S> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_truncated_vec_len_prefix_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct V {
+        #[serde(with = "crate::vec_lv16")]
+        data: Vec<u8>,
+    }
+
+    // Length prefix is u16 (2 bytes) but only 1 byte is present.
+    let b = vec![5];
+    let res: Result<V> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_truncated_vecb_len_prefix_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct V {
+        #[serde(with = "crate::vec_lv16b")]
+        data: Vec<u8>,
+    }
+
+    // Byte-sized length prefix is u16 (2 bytes) but only 1 byte is present.
+    let b = vec![5];
+    let res: Result<V> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_vec_len_prefix_overflow_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct V {
+        #[serde(with = "crate::vec_lv64")]
+        data: Vec<u8>,
+    }
+
+    // A length prefix of usize::MAX must not overflow `len + 1` at the
+    // PackedArray call site; with no element data it should be Eof.
+    let b = vec![0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+    let res: Result<V> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_vecb_element_exceeds_byte_count_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct V {
+        #[serde(with = "crate::vec_lv16b")]
+        data: Vec<u64>,
+    }
+
+    // Declared byte length is 1, but a u64 element consumes 8 bytes; the
+    // `self.bytes -= consumed` subtraction must not underflow.
+    let b = vec![1, 0, 1, 2, 3, 4, 5, 6, 7, 8];
+    let res: Result<V> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_tlv_string_len_overflow_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct S {
+        #[serde(with = "crate::str_lv64")]
+        s: String,
+    }
+
+    // A u64 length prefix of usize::MAX must not overflow `n + len` when
+    // forming the payload slice; with no payload it should be Eof.
+    let b = vec![0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+    let res: Result<S> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
