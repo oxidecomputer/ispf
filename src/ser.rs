@@ -1045,9 +1045,7 @@ fn test_str_lv8_length_overflow_errors() {
 
     // 256 bytes does not fit in the u8 length prefix; this must error
     // rather than silently truncating the length to 0.
-    let v = S {
-        s: "a".repeat(256),
-    };
+    let v = S { s: "a".repeat(256) };
     assert!(to_bytes_le(&v).is_err());
 }
 
