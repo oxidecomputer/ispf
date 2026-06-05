@@ -15,6 +15,17 @@ pub use ser::{to_bytes, to_bytes_be, to_bytes_le, Serializer};
 pub struct LittleEndian {}
 pub struct BigEndian {}
 
+/// Convert a collection length (or byte size) to its wire length-prefix
+/// type, erroring if the value does not fit rather than silently
+/// truncating it with an `as` cast.
+fn length_prefix<N, E>(len: usize) -> std::result::Result<N, E>
+where
+    N: std::convert::TryFrom<usize>,
+    E: serde::ser::Error,
+{
+    N::try_from(len).map_err(|_| E::custom("length does not fit in prefix"))
+}
+
 pub mod str_lv8 {
     use serde::ser::SerializeTuple;
 
@@ -23,7 +34,7 @@ pub mod str_lv8 {
         S: serde::Serializer,
     {
         let mut t = s.serialize_tuple(std::mem::size_of::<u8>() + v.len())?;
-        t.serialize_element(&(v.len() as u8))?;
+        t.serialize_element(&crate::length_prefix::<u8, S::Error>(v.len())?)?;
         t.serialize_element(v.as_bytes())?;
         t.end()
     }
@@ -44,7 +55,7 @@ pub mod str_lv16 {
         S: serde::Serializer,
     {
         let mut t = s.serialize_tuple(std::mem::size_of::<u16>() + v.len())?;
-        t.serialize_element(&(v.len() as u16))?;
+        t.serialize_element(&crate::length_prefix::<u16, S::Error>(v.len())?)?;
         t.serialize_element(v.as_bytes())?;
         t.end()
     }
@@ -65,7 +76,7 @@ pub mod str_lv32 {
         S: serde::Serializer,
     {
         let mut t = s.serialize_tuple(std::mem::size_of::<u32>() + v.len())?;
-        t.serialize_element(&(v.len() as u32))?;
+        t.serialize_element(&crate::length_prefix::<u32, S::Error>(v.len())?)?;
         t.serialize_element(v.as_bytes())?;
         t.end()
     }
@@ -86,7 +97,7 @@ pub mod str_lv64 {
         S: serde::Serializer,
     {
         let mut t = s.serialize_tuple(std::mem::size_of::<u64>() + v.len())?;
-        t.serialize_element(&(v.len() as u64))?;
+        t.serialize_element(&crate::length_prefix::<u64, S::Error>(v.len())?)?;
         t.serialize_element(v.as_bytes())?;
         t.end()
     }
@@ -108,7 +119,7 @@ pub mod vec_lv8 {
         T: serde::Serialize,
     {
         let mut t = s.serialize_tuple(std::mem::size_of::<u8>() + v.len())?;
-        t.serialize_element(&(v.len() as u8))?;
+        t.serialize_element(&crate::length_prefix::<u8, S::Error>(v.len())?)?;
         t.serialize_element(&v)?;
         t.end()
     }
@@ -131,7 +142,7 @@ pub mod vec_lv16 {
         T: serde::Serialize,
     {
         let mut t = s.serialize_tuple(std::mem::size_of::<u16>() + v.len())?;
-        t.serialize_element(&(v.len() as u16))?;
+        t.serialize_element(&crate::length_prefix::<u16, S::Error>(v.len())?)?;
         t.serialize_element(&v)?;
         t.end()
     }
@@ -154,7 +165,7 @@ pub mod vec_lv32 {
         T: serde::Serialize,
     {
         let mut t = s.serialize_tuple(std::mem::size_of::<u32>() + v.len())?;
-        t.serialize_element(&(v.len() as u32))?;
+        t.serialize_element(&crate::length_prefix::<u32, S::Error>(v.len())?)?;
         t.serialize_element(&v)?;
         t.end()
     }
@@ -177,7 +188,7 @@ pub mod vec_lv64 {
         T: serde::Serialize,
     {
         let mut t = s.serialize_tuple(std::mem::size_of::<u64>() + v.len())?;
-        t.serialize_element(&(v.len() as u64))?;
+        t.serialize_element(&crate::length_prefix::<u64, S::Error>(v.len())?)?;
         t.serialize_element(&v)?;
         t.end()
     }
@@ -208,7 +219,7 @@ pub mod vec_lv8b {
             sz += e.wire_size();
         }
         let mut t = s.serialize_tuple(std::mem::size_of::<u8>() + v.len())?;
-        t.serialize_element(&(sz as u8))?;
+        t.serialize_element(&crate::length_prefix::<u8, S::Error>(sz)?)?;
         t.serialize_element(&v)?;
         t.end()
     }
@@ -235,7 +246,7 @@ pub mod vec_lv16b {
             sz += e.wire_size();
         }
         let mut t = s.serialize_tuple(std::mem::size_of::<u16>() + v.len())?;
-        t.serialize_element(&(sz as u16))?;
+        t.serialize_element(&crate::length_prefix::<u16, S::Error>(sz)?)?;
         t.serialize_element(&v)?;
         t.end()
     }
@@ -262,7 +273,7 @@ pub mod vec_lv32b {
             sz += e.wire_size();
         }
         let mut t = s.serialize_tuple(std::mem::size_of::<u32>() + v.len())?;
-        t.serialize_element(&(sz as u32))?;
+        t.serialize_element(&crate::length_prefix::<u32, S::Error>(sz)?)?;
         t.serialize_element(&v)?;
         t.end()
     }
@@ -289,7 +300,7 @@ pub mod vec_lv64b {
             sz += e.wire_size();
         }
         let mut t = s.serialize_tuple(std::mem::size_of::<u64>() + v.len())?;
-        t.serialize_element(&(sz as u64))?;
+        t.serialize_element(&crate::length_prefix::<u64, S::Error>(sz)?)?;
         t.serialize_element(&v)?;
         t.end()
     }

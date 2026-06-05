@@ -107,10 +107,13 @@ impl<'de, Endian: NumDe> Deserializer<'de, Endian> {
 
         let n = size_of::<T>();
 
-        let len = T::read_size::<Endian>(&self.input[..n])?;
-        let s = from_utf8(&self.input[n..n + len]).map_err(|_| Error::Eof)?;
+        let len =
+            T::read_size::<Endian>(self.input.get(..n).ok_or(Error::Eof)?)?;
+        let end = n.checked_add(len).ok_or(Error::Eof)?;
+        let s = from_utf8(self.input.get(n..end).ok_or(Error::Eof)?)
+            .map_err(|_| Error::Eof)?;
 
-        self.input = &self.input[n + len..];
+        self.input = &self.input[end..];
         Ok(s)
     }
 }
@@ -209,10 +212,10 @@ impl<'de, 'a, Endian: NumDe> SeqAccess<'de> for PackedArray<'a, 'de, Endian> {
     where
         T: DeserializeSeed<'de>,
     {
-        self.count -= 1;
         if self.count == 0 {
             return Ok(None);
         }
+        self.count -= 1;
         seed.deserialize(&mut *self.de).map(Some)
     }
 }
@@ -243,13 +246,14 @@ impl<'de, 'a, Endian: NumDe> SeqAccess<'de>
         let before = self.de.input.len();
         let res = seed.deserialize(&mut *self.de).map(Some);
         let after = self.de.input.len();
-        self.bytes -= before - after;
+        self.bytes =
+            self.bytes.checked_sub(before - after).ok_or(Error::Eof)?;
         res
     }
 }
 
-impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
-    for &'a mut Deserializer<'de, Endian>
+impl<'de, Endian: NumDe> de::Deserializer<'de>
+    for &mut Deserializer<'de, Endian>
 {
     type Error = Error;
 
@@ -299,7 +303,7 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
     where
         V: Visitor<'de>,
     {
-        let byte = self.input[0];
+        let byte = *self.input.first().ok_or(Error::Eof)?;
         self.input = &self.input[1..];
         visitor.visit_u8(byte)
     }
@@ -308,7 +312,12 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
     where
         V: Visitor<'de>,
     {
-        let bytes = self.input[..2].try_into().map_err(|_| Error::Eof)?;
+        let bytes = self
+            .input
+            .get(..2)
+            .ok_or(Error::Eof)?
+            .try_into()
+            .map_err(|_| Error::Eof)?;
         self.input = &self.input[2..];
         visitor.visit_u16(Endian::deserialize_u16(bytes))
     }
@@ -317,7 +326,12 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
     where
         V: Visitor<'de>,
     {
-        let bytes = self.input[..4].try_into().map_err(|_| Error::Eof)?;
+        let bytes = self
+            .input
+            .get(..4)
+            .ok_or(Error::Eof)?
+            .try_into()
+            .map_err(|_| Error::Eof)?;
         self.input = &self.input[4..];
         visitor.visit_u32(Endian::deserialize_u32(bytes))
     }
@@ -326,7 +340,12 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
     where
         V: Visitor<'de>,
     {
-        let bytes = self.input[..8].try_into().map_err(|_| Error::Eof)?;
+        let bytes = self
+            .input
+            .get(..8)
+            .ok_or(Error::Eof)?
+            .try_into()
+            .map_err(|_| Error::Eof)?;
         self.input = &self.input[8..];
         visitor.visit_u64(Endian::deserialize_u64(bytes))
     }
@@ -356,13 +375,11 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
     where
         V: Visitor<'de>,
     {
-        let mut i = 0;
-        loop {
-            if self.input[i] == b'\0' {
-                break;
-            }
-            i += 1
-        }
+        let i = self
+            .input
+            .iter()
+            .position(|&b| b == b'\0')
+            .ok_or(Error::Eof)?;
         let s =
             from_utf8(&self.input[..i]).map_err(|_| Error::ExpectedString)?;
         self.input = &self.input[i + 1..];
@@ -472,49 +489,65 @@ impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
             }
             "vec8" => {
                 let n = size_of::<u8>();
-                let len = u8::read_size::<Endian>(&self.input[..n])?;
+                let len = u8::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1))
+                visitor.visit_seq(PackedArray::new(self, len))
             }
             "vec16" => {
                 let n = size_of::<u16>();
-                let len = u16::read_size::<Endian>(&self.input[..n])?;
+                let len = u16::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1))
+                visitor.visit_seq(PackedArray::new(self, len))
             }
             "vec32" => {
                 let n = size_of::<u32>();
-                let len = u32::read_size::<Endian>(&self.input[..n])?;
+                let len = u32::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1))
+                visitor.visit_seq(PackedArray::new(self, len))
             }
             "vec64" => {
                 let n = size_of::<u64>();
-                let len = u64::read_size::<Endian>(&self.input[..n])?;
+                let len = u64::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
-                visitor.visit_seq(PackedArray::new(self, len + 1))
+                visitor.visit_seq(PackedArray::new(self, len))
             }
             "vec8b" => {
                 let n = size_of::<u8>();
-                let len = u8::read_size::<Endian>(&self.input[..n])?;
+                let len = u8::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
             "vec16b" => {
                 let n = size_of::<u16>();
-                let len = u16::read_size::<Endian>(&self.input[..n])?;
+                let len = u16::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
             "vec32b" => {
                 let n = size_of::<u32>();
-                let len = u32::read_size::<Endian>(&self.input[..n])?;
+                let len = u32::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
             "vec64b" => {
                 let n = size_of::<u64>();
-                let len = u64::read_size::<Endian>(&self.input[..n])?;
+                let len = u64::read_size::<Endian>(
+                    self.input.get(..n).ok_or(Error::Eof)?,
+                )?;
                 self.input = &self.input[n..];
                 visitor.visit_seq(PackedArrayByteSized::new(self, len))
             }
@@ -1206,4 +1239,124 @@ fn test_struct_vec_lv64b() {
     };
 
     assert_eq!(expected, from_bytes_le(b.as_slice()).unwrap());
+}
+
+#[test]
+fn test_truncated_ints_return_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct Wide {
+        a: u8,
+        b: u16,
+        c: u32,
+        d: u64,
+    }
+
+    // Every prefix shorter than the full 15-byte encoding must yield Eof
+    // rather than panicking on an out-of-bounds slice.
+    let full = vec![1, 2, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0];
+    for n in 0..full.len() {
+        let res: Result<Wide> = from_bytes_le(&full[..n]);
+        assert!(matches!(res, Err(Error::Eof)), "len {} should be Eof", n);
+    }
+    assert!(from_bytes_le::<Wide>(&full).is_ok());
+}
+
+#[test]
+fn test_unterminated_str_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct S {
+        s: String,
+    }
+
+    // No NUL terminator: must return Eof instead of walking past the end.
+    let b = vec![b'm', b'u', b'f', b'f', b'i', b'n'];
+    let res: Result<S> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_truncated_tlv_string_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct S {
+        #[serde(with = "crate::str_lv16")]
+        s: String,
+    }
+
+    // Length prefix claims 6 bytes but the buffer is truncated.
+    let b = vec![6, 0, b'm', b'u', b'f'];
+    let res: Result<S> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_truncated_vec_len_prefix_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct V {
+        #[serde(with = "crate::vec_lv16")]
+        data: Vec<u8>,
+    }
+
+    // Length prefix is u16 (2 bytes) but only 1 byte is present.
+    let b = vec![5];
+    let res: Result<V> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_truncated_vecb_len_prefix_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct V {
+        #[serde(with = "crate::vec_lv16b")]
+        data: Vec<u8>,
+    }
+
+    // Byte-sized length prefix is u16 (2 bytes) but only 1 byte is present.
+    let b = vec![5];
+    let res: Result<V> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_vec_len_prefix_overflow_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct V {
+        #[serde(with = "crate::vec_lv64")]
+        data: Vec<u8>,
+    }
+
+    // A length prefix of usize::MAX must not overflow `len + 1` at the
+    // PackedArray call site; with no element data it should be Eof.
+    let b = vec![0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+    let res: Result<V> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_vecb_element_exceeds_byte_count_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct V {
+        #[serde(with = "crate::vec_lv16b")]
+        data: Vec<u64>,
+    }
+
+    // Declared byte length is 1, but a u64 element consumes 8 bytes; the
+    // `self.bytes -= consumed` subtraction must not underflow.
+    let b = vec![1, 0, 1, 2, 3, 4, 5, 6, 7, 8];
+    let res: Result<V> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
+}
+
+#[test]
+fn test_tlv_string_len_overflow_returns_eof() {
+    #[derive(Deserialize, PartialEq, Debug)]
+    struct S {
+        #[serde(with = "crate::str_lv64")]
+        s: String,
+    }
+
+    // A u64 length prefix of usize::MAX must not overflow `n + len` when
+    // forming the payload slice; with no payload it should be Eof.
+    let b = vec![0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+    let res: Result<S> = from_bytes_le(b.as_slice());
+    assert!(matches!(res, Err(Error::Eof)));
 }
