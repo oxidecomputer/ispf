@@ -80,7 +80,7 @@ where
     Ok(serializer.output)
 }
 
-impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
+impl<Endian: NumSer> ser::Serializer for &mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
@@ -158,10 +158,10 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         unimplemented!()
     }
 
-    fn serialize_some<T: ?Sized>(self, _value: &T) -> Result<Self::Ok>
-    where
-        T: Serialize,
-    {
+    fn serialize_some<T: ?Sized + Serialize>(
+        self,
+        _value: &T,
+    ) -> Result<Self::Ok> {
         unimplemented!()
     }
 
@@ -183,27 +183,21 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
         unimplemented!()
     }
 
-    fn serialize_newtype_struct<T: ?Sized>(
+    fn serialize_newtype_struct<T: ?Sized + Serialize>(
         self,
         _name: &'static str,
         _value: &T,
-    ) -> Result<Self::Ok>
-    where
-        T: Serialize,
-    {
+    ) -> Result<Self::Ok> {
         unimplemented!()
     }
 
-    fn serialize_newtype_variant<T: ?Sized>(
+    fn serialize_newtype_variant<T: ?Sized + Serialize>(
         self,
         _name: &'static str,
         _variant_index: u32,
         _variant: &'static str,
         _value: &T,
-    ) -> Result<Self::Ok>
-    where
-        T: Serialize,
-    {
+    ) -> Result<Self::Ok> {
         unimplemented!()
     }
 
@@ -256,7 +250,7 @@ impl<'a, Endian: NumSer> ser::Serializer for &'a mut Serializer<Endian> {
     }
 }
 
-impl<'a, Endian: NumSer> ser::SerializeSeq for &'a mut Serializer<Endian> {
+impl<Endian: NumSer> ser::SerializeSeq for &mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
@@ -272,7 +266,7 @@ impl<'a, Endian: NumSer> ser::SerializeSeq for &'a mut Serializer<Endian> {
     }
 }
 
-impl<'a, Endian: NumSer> ser::SerializeTuple for &'a mut Serializer<Endian> {
+impl<Endian: NumSer> ser::SerializeTuple for &mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
@@ -288,9 +282,7 @@ impl<'a, Endian: NumSer> ser::SerializeTuple for &'a mut Serializer<Endian> {
     }
 }
 
-impl<'a, Endian: NumSer> ser::SerializeTupleStruct
-    for &'a mut Serializer<Endian>
-{
+impl<Endian: NumSer> ser::SerializeTupleStruct for &mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
@@ -306,9 +298,7 @@ impl<'a, Endian: NumSer> ser::SerializeTupleStruct
     }
 }
 
-impl<'a, Endian: NumSer> ser::SerializeTupleVariant
-    for &'a mut Serializer<Endian>
-{
+impl<Endian: NumSer> ser::SerializeTupleVariant for &mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
@@ -324,7 +314,7 @@ impl<'a, Endian: NumSer> ser::SerializeTupleVariant
     }
 }
 
-impl<'a, Endian: NumSer> ser::SerializeMap for &'a mut Serializer<Endian> {
+impl<Endian: NumSer> ser::SerializeMap for &mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
@@ -347,7 +337,7 @@ impl<'a, Endian: NumSer> ser::SerializeMap for &'a mut Serializer<Endian> {
     }
 }
 
-impl<'a, Endian: NumSer> ser::SerializeStruct for &'a mut Serializer<Endian> {
+impl<Endian: NumSer> ser::SerializeStruct for &mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 
@@ -367,9 +357,7 @@ impl<'a, Endian: NumSer> ser::SerializeStruct for &'a mut Serializer<Endian> {
     }
 }
 
-impl<'a, Endian: NumSer> ser::SerializeStructVariant
-    for &'a mut Serializer<Endian>
-{
+impl<Endian: NumSer> ser::SerializeStructVariant for &mut Serializer<Endian> {
     type Ok = ();
     type Error = Error;
 

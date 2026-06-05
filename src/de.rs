@@ -252,8 +252,8 @@ impl<'de, 'a, Endian: NumDe> SeqAccess<'de>
     }
 }
 
-impl<'de, 'a, Endian: NumDe> de::Deserializer<'de>
-    for &'a mut Deserializer<'de, Endian>
+impl<'de, Endian: NumDe> de::Deserializer<'de>
+    for &mut Deserializer<'de, Endian>
 {
     type Error = Error;
 
