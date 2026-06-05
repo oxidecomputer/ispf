@@ -1034,3 +1034,57 @@ fn test_struct_vec_lv64b() {
 
     assert_eq!(to_bytes_le(&r).unwrap(), expected);
 }
+
+#[test]
+fn test_str_lv8_length_overflow_errors() {
+    #[derive(Serialize)]
+    struct S {
+        #[serde(with = "crate::str_lv8")]
+        s: String,
+    }
+
+    // 256 bytes does not fit in the u8 length prefix; this must error
+    // rather than silently truncating the length to 0.
+    let v = S {
+        s: "a".repeat(256),
+    };
+    assert!(to_bytes_le(&v).is_err());
+}
+
+#[test]
+fn test_vec_lv8_length_overflow_errors() {
+    #[derive(Serialize)]
+    struct S {
+        #[serde(with = "crate::vec_lv8")]
+        data: Vec<u8>,
+    }
+
+    // 256 elements does not fit in the u8 length prefix.
+    let v = S { data: vec![0; 256] };
+    assert!(to_bytes_le(&v).is_err());
+}
+
+#[test]
+fn test_vec_lv8b_byte_size_overflow_errors() {
+    #[derive(Serialize)]
+    struct Elem {
+        b: u8,
+    }
+    impl crate::WireSize for Elem {
+        fn wire_size(&self) -> usize {
+            1
+        }
+    }
+
+    #[derive(Serialize)]
+    struct S {
+        #[serde(with = "crate::vec_lv8b")]
+        data: Vec<Elem>,
+    }
+
+    // Total wire size of 256 bytes does not fit in the u8 byte-size prefix.
+    let v = S {
+        data: (0..256).map(|_| Elem { b: 0 }).collect(),
+    };
+    assert!(to_bytes_le(&v).is_err());
+}
